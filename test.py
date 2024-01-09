@@ -16,9 +16,9 @@ def extract_frame_test():
 
 
 def whisper_infer_test():
-    audio_file = "audio/vietnamese.mp3"
+    audio_file = "audio/english.mp3"
     srt_file = audio_file.split("/")[-1].replace("mp3", "srt")
-    srt_file = whisper_infer(audio_path=audio_file, language="vi", srt_file=srt_file)
+    srt_file = whisper_infer(audio_path=audio_file, language="en", srt_file=srt_file)
 
 if __name__ == "__main__":
     # extract_audio_test()

@@ -14,9 +14,10 @@ from transformers import (
     BartTokenizer
 )
 
-TEXT_OUTPUT_PATH = "texts"
-IMAGE_OUTPUT_PATH = "images"
-AUDIO_OUTPUT_PATH = "audio"
+
+SUB_OUTPUT_PATH = "/home/www/data/data/saigonmusic/hg_project_effect/movie_classify/subs"
+IMAGE_OUTPUT_PATH = "/home/www/data/data/saigonmusic/hg_project_effect/movie_classify/images"
+AUDIO_OUTPUT_PATH = "/home/www/data/data/saigonmusic/hg_project_effect/movie_classify/audios"
 
 
 logger = logging.getLogger(__name__)
@@ -99,7 +100,7 @@ def whisper_infer(audio_path, language="vi", srt_file="test.srt"):
     logger.info("Start transfer english audio to text.")
     
     # Load model and compute output
-    model = whisper.load_model("large-v3")
+    model = whisper.load_model("weights/whisper/large-v2.pt")
     
     transcribe = model.transcribe(
         audio_path,
@@ -112,7 +113,7 @@ def whisper_infer(audio_path, language="vi", srt_file="test.srt"):
     # del model
     del model
     
-    srt_file = os.path.join("subs", srt_file)
+    srt_file = os.path.join(SUB_OUTPUT_PATH, srt_file)
     
     # create timestamp
     for segment in segments:
