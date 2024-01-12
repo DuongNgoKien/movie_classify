@@ -2,12 +2,15 @@ import json
 import os
 import nltk
 import time
+import torch
 from transformers import pipeline,AutoTokenizer,AutoModelForSeq2SeqLM
 from waitress import serve
 from flask import Flask, request, Response
 from flask_cors import CORS, cross_origin
 from utils import audio_extract, whisper_infer
 from inference_detect import *
+import menovideo.menovideo as menoformer
+import detect_violence
 
 app = Flask(__name__)
 
@@ -116,4 +119,20 @@ def detection_text():
     with open('results.json', 'w') as f:
         json.dump(results, f) 
     return results
+
+@app.route("/api/detetcion_violence", methods=["POST","GET"])
+def detect_violence():
+    model = menoformer.DeVTr()
+    detect_violence.resume_checkpoint(model, '/home/www/data/data/saigonmusic/Dev_AI/kiendn/detect_violence/checkpoint/checkpoint-epoch10.pth')
+    video_path = request.args.get("video_path")
+    videos, intervals = detect_violence.capture(video_path,timesep=40,rgb=3,h=200,w=480,frame_interval=3)
+    device =  'cuda' if torch.cuda.is_available() else 'cpu'
+    model.to(device)
+    predictions = []
+    for index in range(len(intervals)):
+        sample = torch.unsqueeze(videos[index],0).to(device)
+        output = model(sample)
+        predictions.append({"prediction":torch.sigmoid(output)[0].item(), "start":intervals[index][0], "end":intervals[index][1]})
+    return json.dumps(predictions)
+    
 serve(app, host="0.0.0.0", port=6001, threads=15)
