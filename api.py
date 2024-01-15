@@ -11,6 +11,7 @@ from utils import audio_extract, whisper_infer
 from inference_detect import *
 import menovideo.menovideo as menoformer
 import detect_violence
+import opennsfw2 as n2
 
 app = Flask(__name__)
 
@@ -132,7 +133,44 @@ def detect_violence():
     for index in range(len(intervals)):
         sample = torch.unsqueeze(videos[index],0).to(device)
         output = model(sample)
-        predictions.append({"prediction":torch.sigmoid(output)[0].item(), "start":intervals[index][0], "end":intervals[index][1]})
+        predictions.append({
+            "start":intervals[index][0], 
+            "end":intervals[index][1],
+            "prediction":torch.sigmoid(output)[0].item(), 
+        })
     return json.dumps(predictions)
-    
+
+@app.route("/api/detetcion_pornography", methods=["POST","GET"])
+def detect_pornography():
+    video_path = request.args.get("video_path")
+    elapsed_seconds, nsfw_probabilities = n2.predict_video_frames(video_path)
+    sum_nsfw = 0
+    count = 0
+    start = 0
+    end = 0
+    predictions = []
+    for i in range(len(nsfw_probabilities)):
+        if nsfw_probabilities[i] >= 0.5:
+            if count == 0:
+                start = elapsed_seconds[i]
+            count += 1
+            sum_nsfw += nsfw_probabilities[i]
+        else:
+            if count !=0:
+                end = elapsed_seconds[i-1]
+                predictions.append({
+                    'start':start,
+                    'end':end,
+                    'avg_nsfw_score': sum_nsfw/count
+                })
+                count = 0
+                sum_nsfw = 0
+    if count != 0:
+        end = elapsed_seconds[i]
+        predictions.append({
+            'start':start,
+            'end':end,
+            'avg_nsfw_score': sum_nsfw/count
+        })
+    return json.dumps(predictions)
 serve(app, host="0.0.0.0", port=6001, threads=15)
