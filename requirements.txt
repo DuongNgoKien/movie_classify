@@ -1,0 +1,3 @@
+menovideo
+opennsfw2
+opencv-python
