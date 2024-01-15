@@ -19,7 +19,7 @@ def summary_infer(file_path, path_save):
         texts = f.read().strip("\n")
 
     tokenizer = AutoTokenizer.from_pretrained(
-        "summary_model_path"
+        "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-bart-large-cnn"
     )
     sentences = nltk.tokenize.sent_tokenize(texts)
     
@@ -51,7 +51,7 @@ def summary_infer(file_path, path_save):
     ]
 
     model = AutoModelForSeq2SeqLM.from_pretrained(
-        "summary_model_path"
+        "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-bart-large-cnn"
     ).to("cuda")
     with open("summary.txt", "w") as f:
         pass
