@@ -20,10 +20,10 @@ def sentiment_analysis_inference(sub_file_path):
     
     # initial tokenizer and model
     tokenizer = AutoTokenizer.from_pretrained(
-        "path_to_model"
+        "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Bert-toxic-1"
     )
     model = BertForSequenceClassification.from_pretrained(
-        "path_to_model"
+        "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Bert-toxic-1"
     ).to("cuda")
     
     # get sentiment-analysis results
