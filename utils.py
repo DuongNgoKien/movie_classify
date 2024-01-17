@@ -88,19 +88,15 @@ def frames_extract(video_file, output_ext="jpg", save_every_frames=5):
     return path_save
 
 
-def whisper_infer(audio_path, language="vi", srt_file="test.srt"):
+def whisper_infer(audio_path, language="vi"):
     """Speech to text inference.
 
     Args:
         audio_path (str): Path to audio file.
-        language (str): Language of audio [en | zh | vi].
-        Defaults to "en".
-        srt_file (str): Path to stored transcribe file. Defaults to "test.srt"
+        language (str): Language of audio [en | zh | vi]. Defaults to "en".
     """
-    logger.info("Start transfer english audio to text.")
-    
     # Load model and compute output
-    model = whisper.load_model("weights/whisper/large-v2.pt")
+    model = whisper.load_model("/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/weights/whisper/large-v2.pt")
     
     transcribe = model.transcribe(
         audio_path,
@@ -108,12 +104,12 @@ def whisper_infer(audio_path, language="vi", srt_file="test.srt"):
         language=language,
         fp16=True
     )
+    
+    result = ""
     segments = transcribe["segments"]
     
     # del model
     del model
-    
-    srt_file = os.path.join(SUB_OUTPUT_PATH, srt_file)
     
     # create timestamp
     for segment in segments:
@@ -127,25 +123,20 @@ def whisper_infer(audio_path, language="vi", srt_file="test.srt"):
         text = text[1:] if text[0] == " " else text
         segment_id = segment["id"] + 1
         segment = (
-            f"{segment_id}\n{start_time} --> {end_time}\n"
-            f"{text}\n\n"
+            f"{start_time} --> {end_time}: {text}\n"
         )
+        result += segment
         
-        # Write file srt
-        with open(srt_file, "a", encoding="utf-8") as sub_file:
-            sub_file.write(segment)
-    
-    return srt_file
+    return result
 
 
 def translation(text, language="vietnamese"):
     """Translate text to english.
     
     Args:
-        text (str): input text to translate (should be Vietnamese text or
+        text (str|list): input text to translate (should be Vietnamese text or
         Chinese text)
-        language (str): input text language [vi | zh]. Defaults to
-        vi.
+        language (str): input text language [vi | zh]. Defaults to vi.
     """
     if language == "vi":
         # define device
@@ -163,28 +154,58 @@ def translation(text, language="vietnamese"):
         ).to(device)
         
         # translate vietnames to english text
-        input_ids = tokenizer(
-            text,
-            padding=True,
-            return_tensors="pt"
-        ).to(device)
-        output_ids = model.generate(
-            **input_ids,
-            decoder_start_token_id=tokenizer.lang_code_to_id["en_XX"],
-            num_return_sequences=1,
-            num_beams=5,
-            early_stopping=True
-        )
+        if isinstance(text, str):
+            input_ids = tokenizer(
+                text,
+                padding=True,
+                return_tensors="pt"
+            ).to(device)
+            output_ids = model.generate(
+                **input_ids,
+                decoder_start_token_id=tokenizer.lang_code_to_id["en_XX"],
+                num_return_sequences=1,
+                num_beams=5,
+                early_stopping=True
+            )
+            
+            # decode ids to text
+            en_texts = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+            
+            # delete tokenizer and model and
+            del tokenizer
+            del model
+            
+            return en_texts
         
-        # decode ids to text
-        en_texts = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-        
-        # delete tokenizer and model and
-        del tokenizer
-        del model
-        
-        return en_texts
-    
+        elif isinstance(text, list):
+            english_texts = []
+            for t in text:
+                input_ids = tokenizer(
+                    t,
+                    padding=True,
+                    return_tensors="pt"
+                ).to(device)
+                output_ids = model.generate(
+                    **input_ids,
+                    decoder_start_token_id=tokenizer.lang_code_to_id["en_XX"],
+                    num_return_sequences=1,
+                    num_beams=5,
+                    early_stopping=True
+                )
+                
+                # decode ids to text
+                en_texts = tokenizer.batch_decode(
+                    output_ids,
+                    skip_special_tokens=True
+                )
+                english_texts.append(en_texts)
+            
+            # delete tokenizer and model and
+            del tokenizer
+            del model
+            
+            return "\n".join(english_texts)
+                
     elif language == "zh":
         # define the device
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -199,27 +220,52 @@ def translation(text, language="vietnamese"):
             local_files_only=True
         ).to(device)
         
-        # encode input ids
-        input_ids = tokenizer.prepare_seq2seq_batch(
-            [text],
-            return_tensors="pt"
-        ).to(device)
+        if isinstance(text, str):
+            # encode input ids
+            input_ids = tokenizer.prepare_seq2seq_batch(
+                [text],
+                return_tensors="pt"
+            ).to(device)
+            
+            # translation
+            output_ids = model.generate(**input_ids)
+            
+            # decode the output_ids to text
+            english_texts = tokenizer.batch_decode(
+                output_ids,
+                skip_special_tokens=True
+            )
+            
+            # delete tokenizer and model
+            del tokenizer
+            del model
+            
+            return english_texts
         
-        # translation
-        output_ids = model.generate(**input_ids)
-        
-        # decode the output_ids to text
-        chinese_texts = tokenizer.batch_decode(
-            output_ids,
-            skip_special_tokens=True
-        )
-        
-        # delete tokenizer and model
-        del tokenizer
-        del model
-        
-        return chinese_texts
-    
+        else:
+            english_texts = []
+            for t in text:
+                # encode input ids
+                input_ids = tokenizer.prepare_seq2seq_batch(
+                    [text],
+                    return_tensors="pt"
+                ).to(device)
+                
+                # translation
+                output_ids = model.generate(**input_ids)
+                
+                # decode the output_ids to text
+                en_texts = tokenizer.batch_decode(
+                    output_ids,
+                    skip_special_tokens=True
+                )
+                english_texts.append(en_texts)
+            
+            # delete tokenizer and model
+            del tokenizer
+            del model
+
+            return "\n".join(english_texts)
     else:
         raise NotImplementedError(f"Language {language} not supported yet!")
     
