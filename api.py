@@ -93,6 +93,15 @@ def analysis_process():
                 )
             
             # Do summary and text analysis with speech2text_result
+            summary_infer(speech2text_result)
+            summary_update_api = f"{ROOT_API}/content_summary/create"
+            
+            sentiment_analysis_inference(speech2text_result)
+            analysis_update_api = f"{ROOT_API}/content_analysis/create"
+            
+            update_status(
+                type="command_status", video_id=video_id, status="Done"
+            )
             
         else:
             # process image analysis
