@@ -1,9 +1,8 @@
 import nltk
 import time
-
+import pysrt
 from transformers import (AutoTokenizer, AutoModelForSeq2SeqLM)
-
-def summary_infer(file_path, path_save):
+def summary_infer(file_path):
     """Summary inferences.
 
     Args:
@@ -13,13 +12,13 @@ def summary_infer(file_path, path_save):
     Returns:
         return summary file save path for api inferences.
     """
-    start_time = time.time()
-
-    with open(file_path, "r") as f:
-        texts = f.read().strip("\n")
-
+    outputs_list = []
+    # with open(file_path, "r") as f:
+    #     texts = f.read().strip("\n")
+    subs = pysrt.open(file_path)
+    texts = subs.text.strip("\n")
     tokenizer = AutoTokenizer.from_pretrained(
-        "summary_model_path"
+        "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-bart-large-cnn"
     )
     sentences = nltk.tokenize.sent_tokenize(texts)
     
@@ -51,28 +50,20 @@ def summary_infer(file_path, path_save):
     ]
 
     model = AutoModelForSeq2SeqLM.from_pretrained(
-        "summary_model_path"
+        "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-bart-large-cnn"
     ).to("cuda")
-    with open("summary.txt", "w") as f:
-        pass
+    
+    # with open("summary.txt", "w") as f:
+    #     pass
     for input in inputs:
         # generate text summary
         outputs = model.generate(**input, max_length=512)
         text_summary = tokenizer.decode(*outputs, skip_special_tokens=True)
-        
+        outputs_list.append(text_summary)
         # save the summary
-        with open(path_save, "a") as f:
-            f.write(text_summary)
+        # with open(path_save, "a") as f:
+        #     f.write(text_summary)
 
-    # time caculate for debug
-    end_time = time.time()
-    execution_time = end_time - start_time
-
-    minutes, seconds = divmod(execution_time, 60)
-    time_format = "{:02d}:{:02d}".format(int(minutes), int(seconds))
-    
-    print(time_format)
-    
     del tokenizer, model
 
-    return path_save
+    return outputs_list
