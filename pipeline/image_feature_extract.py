@@ -20,7 +20,7 @@ class ImageFeatureExtractor:
         isTrain=False,
         batch_size=1,
         save_dir="./features/img_features",
-        load_model="./pytorchi3d/models/rgb_imagenet.pt",
+        load_model="/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/models/rgb_imagenet.pt",
     ):
         self.root = root
         self.mode = mode

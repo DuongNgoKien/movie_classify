@@ -20,6 +20,6 @@ def infer(rgb_list_file, audio_list_file):
     model = Model(args)
     model = model.to(args.device)
     model_dict = model.load_state_dict(
-        {k.replace('module.', ''): v for k, v in torch.load('./HyperVD/ckpt/pretrained.pkl', map_location=torch.device('cpu')).items()})
+        {k.replace('module.', ''): v for k, v in torch.load('/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/pretrained.pkl', map_location=torch.device('cpu')).items()})
     pred = test(test_loader, model, args)
     return pred
