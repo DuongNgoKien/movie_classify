@@ -118,10 +118,7 @@ def analysis_process():
                     sub_file_path=sub_file_path
                 )
             
-            # Do summary and text analysis with speech2text_result
-            summary_results = summary_infer(sub_file_path)
-            # summary_update_api = f"{ROOT_API}/content_summary/create"
-            
+            # Do text analysis with speech2text_result           
             text_analysis_results = sentiment_analysis_inference(
                 category_id,
                 sub_file_path
@@ -167,6 +164,7 @@ def analysis_process():
             update_status(
                 type="content_status", video_id=video_id, status="Done"
             )
+
 
 
 def update_status(type, video_id, status):
