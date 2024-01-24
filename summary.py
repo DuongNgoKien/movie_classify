@@ -2,6 +2,7 @@ import nltk
 import time
 import pysrt
 from transformers import (AutoTokenizer, AutoModelForSeq2SeqLM)
+nltk.download('punkt')
 def summary_infer(file_path):
     """Summary inferences.
 
