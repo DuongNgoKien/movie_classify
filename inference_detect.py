@@ -9,10 +9,12 @@ from transformers import (
     AutoTokenizer
 )
 
+
 category_id = random.randint(1, 12)
 
 
-def sentiment_analysis_inference(sub_file_path):
+def sentiment_analysis_inference(category_id, sub_file_path):
+
     """Text sentiment analysis inferences.
 
     Args:
@@ -96,6 +98,7 @@ def sentiment_analysis_inference(sub_file_path):
         }
         if float(probability) >= 0.7 and pred_label_idx.item() == 1:
             results.append(result)
+
     del model
     del tokenizer
 

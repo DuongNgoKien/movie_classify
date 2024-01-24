@@ -11,7 +11,7 @@ def convert_mp4_to_avi(file_name, output_directory):
     #                                                 input = input_name, 
     #                                                 output = output)
 
-    cmd = "ffmpeg -i {} -ab 160K -ac 1 -ar 16000 -vn {}".format(input_name, output) #os.path.join(this_path, save_file_id))
+    cmd = "ffmpeg -i {} -ab 160K -ac 1 -ar 16000 -vn {} -y".format(input_name, output) #os.path.join(this_path, save_file_id))
 
     os.system(cmd)
     return  output

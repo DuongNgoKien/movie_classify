@@ -28,8 +28,8 @@ class AudioFeatureExtractor():
         
         audio_list_file = []
         
-        if os.path.exists(os.path.join(self.feature_save_path, audio_name[:-4])+".npy"):
-            return os.path.join(self.feature_save_path, audio_name[:-4])+".npy"
+        # if os.path.exists(os.path.join(self.feature_save_path, audio_name[:-4])+".npy"):
+        #     return os.path.join(self.feature_save_path, audio_name[:-4])+".npy"
 
         embeddings = embedding_model.forward(audio)
         np.save(os.path.join(self.feature_save_path, audio_name[:-4]),embeddings.detach().cpu().numpy())
