@@ -36,4 +36,5 @@ class AudioFeatureExtractor():
         path_save = (os.path.join(self.feature_save_path, audio_name[:-4])+".npy")
             
         audio_list_file.append(path_save)
+        
         return audio_list_file

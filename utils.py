@@ -291,6 +291,7 @@ def translation(text, language="vietnamese", sub_file_path=""):
 
 
 def timestamp_format(milliseconds):
+    milliseconds = int(milliseconds)
     hours = milliseconds // 3_600_000
     milliseconds -= hours * 3_600_000
     minutes = milliseconds // 60_000
@@ -298,7 +299,7 @@ def timestamp_format(milliseconds):
     seconds = milliseconds // 1000
     milliseconds -= seconds * 1000
     
-    return f"{hours}:{minutes}:{seconds},{milliseconds:03}"
+    return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
   
 
 if __name__ == "__main__":

@@ -64,7 +64,7 @@ def sentiment_analysis_inference(category_id, sub_file_path):
             "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-racism-pytorch"
         ).to("cuda")
 
-    elif category_id == 4:
+    elif category_id == 4 or category_id == 2:
         tokenizer = AutoTokenizer.from_pretrained(
             "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-sexism-pytorch"
         )

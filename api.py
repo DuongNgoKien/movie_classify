@@ -37,7 +37,7 @@ IMG_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify
 AUDIO_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/features/audio_features"
 SUB_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/subs"
 ROOT_API = "http://183.81.35.24:32774"
-COMMAND_UPDATE_STATUS_API = f"{ROOT_API}/content_commands/update_status"
+COMMAND_UPDATE_STATUS_API = f"{ROOT_API}/content_command/update_status"
 CONTENT_UPDATE_STATUS_API = f"{ROOT_API}/content/update_status"
 
 
@@ -131,8 +131,8 @@ def analysis_process():
                     "category_id": category_id,
                     "timespan": text_analysis_result["time"],
                     "content": text_analysis_result["text"],
-                    "detect_from": "text"
-                    # "user_id": user_id
+                    "detect_from": "text",
+                    "analysis_threshold": text_analysis_result["probability"]
                 }
                 requests.post(url=analysis_update_api, json=text_analysis_data)
             
@@ -172,7 +172,9 @@ def update_status(type, video_id, status):
         COMMAND_UPDATE_STATUS_API if type == "command_status"
         else CONTENT_UPDATE_STATUS_API
     )
-    requests.post(api, json={"id": video_id, "status": status})
+    api = f"{api}?id={video_id}&status={status}"
+    print(api)
+    requests.put(api)
 
 
 def detect_violence(img_dir, audio_path, fps):
@@ -231,15 +233,16 @@ def post_predictions(
                 end = timestamp_format(end * 1000)
                 avg_prob = sum_prob/count
                 if avg_prob >= threshold:
-                    requests.post(
-                        api, 
-                        json = {
+                    json_data = {
                         "category_id": category_id, 
                         'content_id': content_id, 
                         'timespan': start + " --> " + end,
                         'content': content, 
-                        'detect_from': 'image'
-                    })
+                        'detect_from': 'image',
+                        'analysis_threshold': avg_prob
+                    }
+                    print(json_data)
+                    requests.post(api, json = json_data)
                 count = 0
                 sum_prob = 0
     if count != 0:
@@ -247,15 +250,16 @@ def post_predictions(
         end = timestamp_format(end * 1000)
         avg_prob = sum_prob/count
         if avg_prob >= threshold:
-            requests.post(
-                api, 
-                json = {
+            json_data = {
                 'category_id': category_id,
                 'content_id': content_id, 
                 'timespan': start + " --> " + end,
                 'content': content, 
-                'detect_from': 'image'
-            })
+                'detect_from': 'image',
+                'analysis_threshold': avg_prob
+            }
+            print(json_data)
+            requests.post(api, json = json_data)
             
             
 if __name__ == "__main__":
