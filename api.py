@@ -138,7 +138,11 @@ def detect_violence(img_dir, audio_path, fps):
     audio_feature_extractor = AudioFeatureExtractor(audio_path, feature_save_path=AUDIO_FEATURE_PATH)
     audio_feature_files = audio_feature_extractor.extract_audio_features()
     pred = infer(rgb_feature_files, audio_feature_files)
-    elapsed_seconds = np.array(elapsed_frames)/fps
+    if fps == 24:
+        elapsed_seconds = np.array(elapsed_frames)/fps
+    elif fps == 30:
+        elapsed_frames = np.array(elapsed_frames)
+        elapsed_seconds = (elapsed_frames + 1 + (elapsed_frames-1)//4)/fps
     return pred, elapsed_seconds
     
 def detect_pornography(video_path):
@@ -146,7 +150,7 @@ def detect_pornography(video_path):
     elapsed_seconds = np.array(elapsed_seconds)
     return nsfw_probabilities, elapsed_seconds
 
-def post_predictions(elapsed_seconds, pred, api, video_id, content_id, category_id, content, threshold=0.7):
+def post_predictions(pred, elapsed_seconds, api, video_id, content_id, category_id, content, threshold=0.7):
     sum_prob, count, start, end = 0, 0, 0, 0
     if elapsed_seconds.ndim == 2:
         start_seconds = elapsed_seconds[:,0]

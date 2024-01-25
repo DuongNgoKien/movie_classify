@@ -74,7 +74,7 @@ class ImageFeatureExtractor:
                     if ip.shape[2] != 16:
                         continue
                     if phase == '0':
-                        elapsed_frames.append([start, end]) 
+                        elapsed_frames.append([start, end-1]) 
                     features.append(i3d.extract_features(ip).squeeze(0).permute(1,2,3,0).data.cpu().numpy())      
                 print(os.path.join(self.save_dir, name[0]+f"__{phase}"))
                 np.save(os.path.join(self.save_dir, name[0]+f"__{phase}"), np.concatenate(features, axis=0).reshape(-1, 1024))

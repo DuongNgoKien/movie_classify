@@ -53,36 +53,36 @@ class Dataset(data.Dataset):
             label = 1.0
 
         if self.modality == 'AUDIO':
-            features = np.array(np.load(self.list[index].strip('\n')), dtype=np.float32)
+            features = np.array(np.load(self.list[index]), dtype=np.float32)
         elif self.modality == 'RGB':
-            features = np.array(np.load(self.list[index].strip('\n')),dtype=np.float32)
+            features = np.array(np.load(self.list[index]),dtype=np.float32)
         elif self.modality == 'FLOW':
-            features = np.array(np.load(self.list[index].strip('\n')), dtype=np.float32)
+            features = np.array(np.load(self.list[index]), dtype=np.float32)
         elif self.modality == 'MIX':
-            features1 = np.array(np.load(self.list[index].strip('\n')), dtype=np.float32)
-            features2 = np.array(np.load(self.flow_list[index].strip('\n')), dtype=np.float32)
+            features1 = np.array(np.load(self.list[index]), dtype=np.float32)
+            features2 = np.array(np.load(self.flow_list[index]), dtype=np.float32)
             if features1.shape[0] == features2.shape[0]:
                 features = np.concatenate((features1, features2),axis=1)
             else:# because the frames of flow is one less than that of rgb
                 features = np.concatenate((features1[:-1], features2), axis=1)
         elif self.modality == 'MIX2':
-            features1 = np.array(np.load(self.list[index].strip('\n')), dtype=np.float32)
-            features2 = np.array(np.load(self.audio_list[index//5].strip('\n')), dtype=np.float32)
+            features1 = np.array(np.load(self.list[index]), dtype=np.float32)
+            features2 = np.array(np.load(self.audio_list[index//5]), dtype=np.float32)
             if features1.shape[0] == features2.shape[0]:
                 features = np.concatenate((features1, features2),axis=1)
             else:# because the frames of flow is one less than that of rgb
                 features = np.concatenate((features1[:-1], features2), axis=1)
         elif self.modality == 'MIX3':
-            features1 = np.array(np.load(self.list[index].strip('\n')), dtype=np.float32)
-            features2 = np.array(np.load(self.audio_list[index//5].strip('\n')), dtype=np.float32)
+            features1 = np.array(np.load(self.list[index]), dtype=np.float32)
+            features2 = np.array(np.load(self.audio_list[index//5]), dtype=np.float32)
             if features1.shape[0] == features2.shape[0]:
                 features = np.concatenate((features1, features2),axis=1)
             else:# because the frames of flow is one less than that of rgb
                 features = np.concatenate((features1[:-1], features2), axis=1)
         elif self.modality == 'MIX_ALL':
-            features1 = np.array(np.load(self.list[index].strip('\n')), dtype=np.float32)
-            features2 = np.array(np.load(self.flow_list[index].strip('\n')), dtype=np.float32)
-            features3 = np.array(np.load(self.audio_list[index//5].strip('\n')), dtype=np.float32)
+            features1 = np.array(np.load(self.list[index]), dtype=np.float32)
+            features2 = np.array(np.load(self.flow_list[index]), dtype=np.float32)
+            features3 = np.array(np.load(self.audio_list[index//5]), dtype=np.float32)
             if features1.shape[0] == features2.shape[0]:
                 features = np.concatenate((features1, features2, features3),axis=1)
             else:# because the frames of flow is one less than that of rgb
