@@ -21,6 +21,7 @@ def summary_infer(script):
         return summary file save path for api inferences.
     """
     outputs_list = []
+    # Choose the process step based on the input is text or file
 #    subs = pysrt.open(file_path)
     first_text = script
     texts = re.sub(r'\d+:\d+:\d+,\d+ --> \d+:\d+:\d+,\d+\n', '', first_text)
@@ -71,13 +72,15 @@ def summary_infer(script):
 
     return outputs_list
 
+
 def update_status(id, content_id, status):
     api = (
         CONTENT_SCRIPT_UPDATE_STATUS_API
     )
     requests.post(
         api, json={"id": id, "content_id": content_id, "status": status})
-    
+
+
 def main():
     content_list = requests.get(f"{ROOT_API}/Content_Script/Get_Wait")
     content_list = content_list.json()
@@ -108,6 +111,7 @@ def main():
                 "status": "done"
             }
         )
+
 
 if __name__ == "__main__":
     main()
