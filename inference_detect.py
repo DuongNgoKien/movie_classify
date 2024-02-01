@@ -10,9 +10,7 @@ from transformers import (
     AutoTokenizer
 )
 
-
 # category_id = random.randint(1, 12)
-
 threshold = 0.7
 def extract_subtitle_info(text: str) -> list:
     """
@@ -31,66 +29,25 @@ def sentiment_analysis_inference(category_id, sub_script):
 
     Args:
         sub_file_path (str or like_path): path to sub file.
+    Category id :
+    1. Action
+    4. Sexism
+    5. Horror
+    6. Racist
+    10. Political
+    11. Religious
+    12. Toxic
     """
+    
     # get sub
+    
     # subs = pysrt.open(sub_file_path)
     subtitle_info = extract_subtitle_info(sub_script)
+    
     # initial tokenizer and model
-    if category_id == 1 or category_id == 2:  # Action detect model
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-action-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-action-pytorch"
-        )
-
-    elif category_id == 4:  # Sexism detect model
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-sexism-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-sexism-pytorch"
-        ).to("cuda")
-
-    elif category_id == 5:  # Horror detect model
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-horror-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-horror-pytorch"
-        ).to("cuda")
-
-    elif category_id == 6:  # Racism detect model
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-racism-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-racism-pytorch"
-        ).to("cuda")
-
-    elif category_id == 7 or category_id == 8 or category_id == 9 or category_id == 12:  # Toxic detect model
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-toxic-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-toxic-pytorch"
-        ).to("cuda")
-
-    elif category_id == 10:  # Political detect model
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-political-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-political-pytorch"
-        ).to("cuda")
-
-    elif category_id == 11:  # Religious detect model
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-religious-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-religious-pytorch"
-        ).to("cuda")
+    path_to_model = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-{}-pytorch".format(category_id)
+    tokenizer = AutoTokenizer.from_pretrained(path_to_model)
+    model = BertForSequenceClassification.from_pretrained(path_to_model).to("cuda")
 
     # get sentiment-analysis results
     results = []
