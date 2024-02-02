@@ -8,7 +8,7 @@ import random
 from model import Model
 from dataset import Dataset
 from train import train
-from test import test
+from dragnet.test import test
 import option
 import copy
 from tqdm import tqdm
