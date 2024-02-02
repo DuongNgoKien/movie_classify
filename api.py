@@ -150,9 +150,11 @@ def analysis_process():
             # process image analysis
             category_api = f"{ROOT_API}/Category_Content/create"
             fps, img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
+            list_img_dir = [img_dir]
             audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
+            audio_list_path = [audio_path]
             
-            pred, elapsed_seconds = detect_violence(img_dir, audio_path, fps)
+            pred, elapsed_seconds = detect_violence(list_img_dir, audio_list_path, fps)
             post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='2', content='Bao luc')
             
             pred, elapsed_seconds = detect_pornography(video_path)
