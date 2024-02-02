@@ -24,6 +24,8 @@ def extract_subtitle_info(text: str) -> list:
     """
     subtitle_info = re.findall(r'(\d+:\d+:\d+,\d+) --> (\d+:\d+:\d+,\d+)\n(.+)', text)
     return subtitle_info
+
+
 def sentiment_analysis_inference(category_id, sub_script):
     """Text sentiment analysis inferences.
 
@@ -63,19 +65,19 @@ def sentiment_analysis_inference(category_id, sub_script):
         probs = outputs[0].softmax(1)
         pred_label_idx = probs.argmax()
         pred_label = model.config.id2label[pred_label_idx.item()]
-        probability = "{:.2f}%".format(probs[0][pred_label_idx.item()].item()*100)
+        probability = int(probs[0][pred_label_idx.item()].item()*100)
         result = {
             'pred_label_idx': pred_label_idx.item(),
             'pred_label': pred_label,
             'text': sub[2],
-            # 'time': "{}:{:02d}:{:02d},{:02d} --> {}:{:02d}:{:02d},{:02d}".format(
-            #     sub.start.hours, sub.start.minutes, sub.start.seconds, sub.start.milliseconds,
-            #     sub.end.hours, sub.end.minutes, sub.end.seconds, sub.end.milliseconds),
             'time': "{} --> {}".format(sub[0], sub[1]),
             'probability': probability
         }
         # if the probability is greater than threshold and the label is True, add the result to the list
-        if float(probability.strip('%')) >= threshold and pred_label_idx.item() == 1:
+        if (
+            probability >= threshold 
+            and pred_label_idx.item() == 1
+        ):
             results.append(result)
     # delete the model and tokenizer to free GPU
     del model

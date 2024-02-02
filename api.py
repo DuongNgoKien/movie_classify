@@ -46,30 +46,31 @@ def analysis_process():
     # get all content wait list
     content_list = requests.get(f"{ROOT_API}/content_command/get_wait")
     content_list = content_list.json()
-    content_list = [
-        content for content in content_list if content["status"] == "wait"
-    ]
+
     # processing
     for content in content_list:  
         # get content information
         content_id = content["content_id"]
         category_id = content["category_id"]
         video_id = content["id"]
-        # language = LANGUAGES[content["language"]]
-        language = "en"
         
         content_info = requests.get(
             f"{ROOT_API}/content/get_by_id/{content_id}"
         ).json()
+        language = content_info["language"]
+        
         # check path and download if not exists.
         video_path = content_info["path"]
-        print(f"Video_path: {video_path}")
+
         if not os.path.exists(video_path):
             try:
                 video_url = content_info["url"]
                 title = content_info["title"].replace(" ", "_")
-                os.system(f"wget -O {title}.mp4 {video_url} -P {VIDEO_PATH}")
                 video_path = f"{VIDEO_PATH}/{title}.mp4"
+                if not os.path.exists(video_path):
+                    os.system(
+                        f"wget -O {video_path} {video_url}"
+                    )
             except:
                 update_status(
                     type="command_status",
@@ -80,91 +81,231 @@ def analysis_process():
         # check content_type
         content_type = content["command"]
         
-        if content_type == "text":
-            # process audio analysis
-            update_status(
-                type="command_status", video_id=video_id, status="Processing"
+        if content_type == "speech":
+            speech(
+                video_id=video_id, 
+                video_path=video_path,
+                language=language,
+                content_id=content_id
             )
-            
-            audio_path = audio_extract(video_path)
-            sub_file_path = os.path.join(SUB_PATH, language, f"{video_id}.srt")
-            speech2text_result = whisper_infer(
-                audio_path,
-                language,
-                sub_file_path
+        elif content_type == "classify_text":
+            classify_text(
+                content_id=content_id,
+                category_id=category_id,
+                video_id=video_id
             )
-            speech2text_update_api = f"{ROOT_API}/content_script/create"
-            requests.post(
-                speech2text_update_api,
-                json = {
-                    "content_id": content_id,
-                    "script": speech2text_result,
-                    "language": "en",
-                    "user_id": 1
-                }
+        elif content_type == "speech_and_classify_text":
+            speech_and_classify_text(
+                video_id=video_id,
+                video_path=video_path,
+                language=language,
+                content_id=content_id,
+                category_id=category_id
             )
-            
-            # translate if language is not vietnamese
-            if language != "en":
-                sub_file_path = os.path.join(
-                    SUB_PATH,
-                    "en",
-                    f"{video_id}_translate.srt"
-                )
-                speech2text_result = speech2text_result.split("\n")
-                speech2text_result = translation(
-                    speech2text_result,
-                    language=language,
-                    sub_file_path=sub_file_path
-                )
-            
-            # Do text analysis with speech2text_result           
-            text_analysis_results = sentiment_analysis_inference(
-                category_id,
-                sub_file_path
-            )
-  
-            analysis_update_api = f"{ROOT_API}/category_content/create"
-            for text_analysis_result in text_analysis_results:
-                text_analysis_data = {
-                    "content_id": content_id,
-                    "category_id": category_id,
-                    "timespan": text_analysis_result["time"],
-                    "content": text_analysis_result["text"],
-                    "detect_from": "text",
-                    "analysis_threshold": text_analysis_result["probability"]
-                }
-                requests.post(url=analysis_update_api, json=text_analysis_data)
-            
-            update_status(
-                type="command_status", video_id=video_id, status="Done"
-            )
-            update_status(
-                type="content_status", video_id=video_id, status="Done"
-            )
-            
         else:
-            update_status(
-                type="command_status", video_id=video_id, status="Processing"
+            classify_image(
+                video_path=video_path,
+                video_id=video_id,
+                content_id=content_id
             )
-            # process image analysis
-            category_api = f"{ROOT_API}/Category_Content/create"
-            fps, img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
-            audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
-            
-            pred, elapsed_seconds = detect_violence(img_dir, audio_path, fps)
-            post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='2', content='Bao luc')
-            
-            pred, elapsed_seconds = detect_pornography(video_path)
-            post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='4', content='Khieu dam')
-            
-            update_status(
-                type="command_status", video_id=video_id, status="Done"
-            )
-            update_status(
-                type="content_status", video_id=video_id, status="Done"
-            )
+        
+        
+def classify_text(content_id, category_id, video_id):
+    # update status
+    update_status(
+        type="command_status", video_id=video_id, status="Processing"
+    )
+    analysis_update_api = f"{ROOT_API}/content_category/create"
+    
+    # get script and process
+    try:
+        content_info = requests.get(
+            f"{ROOT_API}/content_script/get_by_content_id/{content_id}"
+        ).json()
+        speech2text_result = content_info["script"]
+        text_analysis_results = sentiment_analysis_inference(
+            category_id,
+            speech2text_result
+        )
+        for text_analysis_result in text_analysis_results:
+            text_analysis_data = {
+                "content_id": content_id,
+                "category_id": category_id,
+                "timespan": text_analysis_result["time"],
+                "content": text_analysis_result["text"],
+                "detect_from": "text",
+                "threshold": text_analysis_result["probability"]
+            }
+            requests.post(url=analysis_update_api, json=text_analysis_data)
+        update_status(
+            type="command_status", video_id=video_id, status="Done"
+        )
+        update_status(
+            type="content_status", video_id=video_id, status="Done"
+        )
+    
+    except Exception as e:
+        update_progress_status(
+            video_id=video_id,
+            process_percent=100,
+            note=f"{e}"
+        )
 
+
+def speech(
+    video_id,
+    video_path,
+    language,
+    content_id,
+):
+    update_status(
+        type="command_status", video_id=video_id, status="Processing"
+    )
+    
+    # convert mp4 to audio and update progress status
+    audio_path = audio_extract(video_path)
+    update_progress_status(
+        video_id=video_id,
+        note="Convert video to audio done. Convert audio to text now.",
+        process_percent=10
+    )
+    
+    # speech to text
+    speech2text_result = whisper_infer(audio_path, language)
+    
+    # update progress status
+    update_progress_status(
+        video_id=video_id,
+        note="Convert video to audio done.",
+        process_percent=100
+    )
+    
+    # post to api
+    speech2text_update_api = f"{ROOT_API}/content_script/create"
+    requests.post(
+        speech2text_update_api,
+        json = {
+            "content_id": content_id,
+            "script": speech2text_result,
+            "language": language,
+            "user_id": 1
+        }
+    )
+    
+    # update command and content status
+    update_status(type="command_status", video_id=video_id, status="done")
+    update_status(type="content_status", video_id=video_id, status="done")
+
+
+def speech_and_classify_text(
+    video_id,
+    video_path,
+    language,
+    content_id,
+    category_id
+):
+    update_status(
+        type="command_status", video_id=video_id, status="Processing"
+    )
+    
+    # Convert mp4 to audio and update progress status
+    audio_path = audio_extract(video_path)
+    update_progress_status(
+        video_id=video_id,
+        note="Convert video to audio done. Convert audio to text now.",
+        process_percent=10
+    )
+    
+    # speech to text
+    speech2text_result = whisper_infer(
+        audio_path,
+        language,
+    )
+    
+    # update progress status
+    update_progress_status(
+        video_id=video_id,
+        note="Speech to text done.",
+        process_percent=70
+    )
+    
+    # post speech to text result to api
+    speech2text_update_api = f"{ROOT_API}/content_script/create"
+    requests.post(
+        speech2text_update_api,
+        json = {
+            "content_id": content_id,
+            "script": speech2text_result,
+            "language": language,
+            "user_id": 1
+        }
+    )
+
+    # translate if language is not vietnamese
+    if language != "en":
+        speech2text_result = speech2text_result.split("\n")
+        speech2text_result = translation(
+            speech2text_result,
+            language=language,
+        )
+    
+    # Do text analysis with speech2text_result           
+    text_analysis_results = sentiment_analysis_inference(
+        category_id,
+        speech2text_result
+    )
+    print(text_analysis_results)
+    # update progress status
+    update_progress_status(
+        video_id=video_id,
+        note="Text analysis done.",
+        process_percent=100
+    )
+    
+    # post analysis results to api
+    analysis_update_api = f"{ROOT_API}/content_category/create"
+    
+    for text_analysis_result in text_analysis_results:
+        text_analysis_data = {
+            "content_id": content_id,
+            "category_id": category_id,
+            "timespan": text_analysis_result["time"],
+            "content": text_analysis_result["text"],
+            "detect_from": "text",
+            "threshold": text_analysis_result["probability"]
+        }
+        requests.post(url=analysis_update_api, json=text_analysis_data)
+    
+    # update command and content status
+    update_status(
+        type="command_status", video_id=video_id, status="Done"
+    )
+    update_status(
+        type="content_status", video_id=video_id, status="Done"
+    )
+
+
+def classify_image(video_path, video_id, content_id):
+    update_status(
+        type="command_status", video_id=video_id, status="Processing"
+    )
+    # process image analysis
+    category_api = f"{ROOT_API}/content_category/create"
+    fps, img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
+    audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
+    
+    pred, elapsed_seconds = detect_violence(img_dir, audio_path, fps)
+    post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='2', content='Bao luc')
+    
+    pred, elapsed_seconds = detect_pornography(video_path)
+    post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='4', content='Khieu dam')
+    
+    update_status(
+        type="command_status", video_id=video_id, status="Done"
+    )
+    update_status(
+        type="content_status", video_id=video_id, status="Done"
+    )
 
 
 def update_status(type, video_id, status):
@@ -239,7 +380,7 @@ def post_predictions(
                         'timespan': start + " --> " + end,
                         'content': content, 
                         'detect_from': 'image',
-                        'analysis_threshold': avg_prob
+                        'threshold': avg_prob
                     }
                     print(json_data)
                     requests.post(api, json = json_data)
@@ -256,11 +397,21 @@ def post_predictions(
                 'timespan': start + " --> " + end,
                 'content': content, 
                 'detect_from': 'image',
-                'analysis_threshold': avg_prob
+                'threshold': avg_prob
             }
             print(json_data)
             requests.post(api, json = json_data)
-            
+
+
+def update_progress_status(video_id, process_percent, note):
+    requests.put(
+        f"{ROOT_API}/content_command/update_progress",
+        params={
+            "id": video_id,
+            "new_note": note,
+            "progress": process_percent
+        }
+    )    
             
 if __name__ == "__main__":
     analysis_process()

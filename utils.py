@@ -1,6 +1,7 @@
 import os
 import cv2
 import torch
+import subprocess
 import whisper
 import logging
 
@@ -15,21 +16,20 @@ from transformers import (
 )
 
 
-SUB_OUTPUT_PATH = "/home/www/data/data/saigonmusic/hg_project_effect/movie_classify/subs"
-IMAGE_OUTPUT_PATH = "/home/www/data/data/saigonmusic/hg_project_effect/movie_classify/images"
-AUDIO_OUTPUT_PATH = "/home/www/data/data/saigonmusic/hg_project_effect/movie_classify/audios"
+SUB_OUTPUT_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/subs"
+IMAGE_OUTPUT_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/images"
+AUDIO_OUTPUT_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/audios"
 
 
 logger = logging.getLogger(__name__)
 
 
-def audio_extract(video_file, output_ext="mp3"):
+def audio_extract(video_file):
     """
     Convert video to audio using `ffmpeg` command with the help of subprocess
     module
     Args:
         video_file(str): path of video to extract audio
-        output_ext(str): extension of output audio ([mp3 | wav])
     """
     assert os.path.exists(video_file), f"Video path {video_file} not exists."
     filename, ext = os.path.splitext(video_file)
@@ -38,16 +38,11 @@ def audio_extract(video_file, output_ext="mp3"):
     if not os.path.exists(AUDIO_OUTPUT_PATH):
         os.mkdir(AUDIO_OUTPUT_PATH)
 
-    output_path = os.path.join(AUDIO_OUTPUT_PATH, f"{filename}.{output_ext}")
+    output_path = os.path.join(AUDIO_OUTPUT_PATH, f"{filename}.wav")
 
-    # read video
-    video = VideoFileClip(video_file)
-
-    # convert to mp3 file
-    audio = video.audio
-    
-    # export audio
-    audio.write_audiofile(output_path)
+    if not os.path.exists(output_path):
+        command = f"ffmpeg -i {video_file} -ar 16000 -ac 1 {output_path} -y"
+        subprocess.call(command, shell=True)
     
     return output_path
     
@@ -102,7 +97,6 @@ def whisper_infer(audio_path, language="vi", sub_file_path=""):
     transcribe = model.transcribe(
         audio_path,
         verbose=True,
-        language=language,
         fp16=True
     )
     
@@ -128,8 +122,8 @@ def whisper_infer(audio_path, language="vi", sub_file_path=""):
         )
         result += segment
         
-        with open(sub_file_path, "a", encoding="utf-8") as sub_f:
-            sub_f.write(segment)
+        # with open(sub_file_path, "a", encoding="utf-8") as sub_f:
+        #     sub_f.write(segment)
             
     return result
 
