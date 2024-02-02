@@ -88,12 +88,13 @@ def frames_extract(video_file, output_ext="jpg", save_every_frames=5):
     return path_save
 
 
-def whisper_infer(audio_path, language="vi"):
+def whisper_infer(audio_path, language="vi", sub_file_path=""):
     """Speech to text inference.
 
     Args:
         audio_path (str): Path to audio file.
         language (str): Language of audio [en | zh | vi]. Defaults to "en".
+        sub_file_path (str or PathLike): Path to save sub file. Defaults to "".
     """
     # Load model and compute output
     model = whisper.load_model("/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/weights/whisper/large-v2.pt")
@@ -121,22 +122,27 @@ def whisper_infer(audio_path, language="vi"):
         )
         text = segment["text"]
         text = text[1:] if text[0] == " " else text
-        segment_id = segment["id"] + 1
+        # segment_id = segment["id"] + 1
         segment = (
-            f"{start_time} --> {end_time}: {text}\n"
+            f"{start_time} --> {end_time}\n{text}\n\n"
         )
         result += segment
         
+        with open(sub_file_path, "a", encoding="utf-8") as sub_f:
+            sub_f.write(segment)
+            
     return result
 
 
-def translation(text, language="vietnamese"):
+def translation(text, language="vietnamese", sub_file_path=""):
     """Translate text to english.
     
     Args:
         text (str|list): input text to translate (should be Vietnamese text or
         Chinese text)
         language (str): input text language [vi | zh]. Defaults to vi.
+        sub_file_path (str or PathLike): path to save translate sub.
+        Defaults to "".
     """
     if language == "vi":
         # define device
@@ -175,6 +181,9 @@ def translation(text, language="vietnamese"):
             del tokenizer
             del model
             
+            with open(sub_file_path, "w", encoding="utf-8") as sub_f:
+                sub_f.write(en_texts)
+                
             return en_texts
         
         elif isinstance(text, list):
@@ -204,7 +213,11 @@ def translation(text, language="vietnamese"):
             del tokenizer
             del model
             
-            return "\n".join(english_texts)
+            results = "\n".join(english_texts)
+            with open(sub_file_path, "w", encoding="utf-8") as sub_f:
+                sub_f.write()
+            
+            return results
                 
     elif language == "zh":
         # define the device
@@ -240,6 +253,9 @@ def translation(text, language="vietnamese"):
             del tokenizer
             del model
             
+            with open(sub_file_path, "w", encoding="utf-8") as sub_f:
+                sub_f.write(en_texts)
+            
             return english_texts
         
         else:
@@ -264,11 +280,27 @@ def translation(text, language="vietnamese"):
             # delete tokenizer and model
             del tokenizer
             del model
-
-            return "\n".join(english_texts)
+            
+            results = "\n".join(english_texts)
+            with open(sub_file_path, "w", encoding="utf-8") as sub_f:
+                sub_f.write()
+            
+            return results
     else:
         raise NotImplementedError(f"Language {language} not supported yet!")
+
+
+def timestamp_format(milliseconds):
+    milliseconds = int(milliseconds)
+    hours = milliseconds // 3_600_000
+    milliseconds -= hours * 3_600_000
+    minutes = milliseconds // 60_000
+    milliseconds -= minutes * 60_000
+    seconds = milliseconds // 1000
+    milliseconds -= seconds * 1000
     
+    return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
+  
 
 if __name__ == "__main__":
-    pass
+    print(timestamp_format(1000000))

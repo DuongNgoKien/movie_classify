@@ -1,9 +1,16 @@
 import nltk
 import time
-
+import pysrt
+import requests
 from transformers import (AutoTokenizer, AutoModelForSeq2SeqLM)
+import re
+nltk.download('punkt')
+ROOT_API = "http://183.81.35.24:32774"
+CONTENT_SCRIPT_UPDATE_STATUS_API = f"{ROOT_API}/Content_Script/Update_Status"
+CONTENT_SCRIPT_UPDATE_API = f"{ROOT_API}/Content_Script/Update"
 
-def summary_infer(file_path, path_save):
+
+def summary_infer(script):
     """Summary inferences.
 
     Args:
@@ -13,66 +20,94 @@ def summary_infer(file_path, path_save):
     Returns:
         return summary file save path for api inferences.
     """
-    start_time = time.time()
-
-    with open(file_path, "r") as f:
-        texts = f.read().strip("\n")
-
+    outputs_list = []
+#    subs = pysrt.open(file_path)
+    first_text = script
+    texts = re.sub(r'\d+:\d+:\d+,\d+ --> \d+:\d+:\d+,\d+\n', '', first_text)
+#   texts = script.strip("\n")
     tokenizer = AutoTokenizer.from_pretrained(
-        "summary_model_path"
+        "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-bart-large-cnn"
     )
     sentences = nltk.tokenize.sent_tokenize(texts)
-    
+
     # seperate the file if the file is too long compare to the model
     length = 0
     chunk = ""
     chunks = []
-    count =- 1
-    
+    count = - 1
+
     for sentence in sentences:
         count += 1
         combined_length = len(tokenizer.tokenize(sentence)) + length
-        
+
         if combined_length <= tokenizer.max_len_single_sentence:
             chunk += sentence + ""
             length = combined_length
-            if count == len(sentences) -1:
+            if count == len(sentences) - 1:
                 chunks.append(chunk.strip())
         else:
             chunks.append(chunk.strip())
-            
+
             length = 0
             chunk = ""
             chunk += sentence + " "
             length = len(tokenizer.tokenize(sentence))
-        
+
     inputs = [
-        tokenizer(chunk,return_tensors="pt").to("cuda") for chunk in chunks
+        tokenizer(chunk, return_tensors="pt").to("cuda") for chunk in chunks
     ]
 
     model = AutoModelForSeq2SeqLM.from_pretrained(
-        "summary_model_path"
+        "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-bart-large-cnn"
     ).to("cuda")
-    with open("summary.txt", "w") as f:
-        pass
+
     for input in inputs:
         # generate text summary
         outputs = model.generate(**input, max_length=512)
         text_summary = tokenizer.decode(*outputs, skip_special_tokens=True)
-        
-        # save the summary
-        with open(path_save, "a") as f:
-            f.write(text_summary)
+        outputs_list.append(text_summary)
 
-    # time caculate for debug
-    end_time = time.time()
-    execution_time = end_time - start_time
-
-    minutes, seconds = divmod(execution_time, 60)
-    time_format = "{:02d}:{:02d}".format(int(minutes), int(seconds))
-    
-    print(time_format)
-    
     del tokenizer, model
 
-    return path_save
+    return outputs_list
+
+def update_status(id, content_id, status):
+    api = (
+        CONTENT_SCRIPT_UPDATE_STATUS_API
+    )
+    requests.post(
+        api, json={"id": id, "content_id": content_id, "status": status})
+    
+def main():
+    content_list = requests.get(f"{ROOT_API}/Content_Script/Get_Wait")
+    content_list = content_list.json()
+    content_list = [
+        content for content in content_list if content["status"] == "wait"
+    ]
+    for content in content_list:
+        id = content["id"]
+        content_id = content["content_id"]
+        content_script = content["script"]
+
+        update_status(
+            id=id,
+            content_id=content_id,
+            status="processing"
+        )
+
+        # process
+        summary_output = summary_infer(
+            script=content_script
+        )
+        # post result
+        requests.post(
+            CONTENT_SCRIPT_UPDATE_API,
+            json={
+                "content_id": content_id,
+                "summarize": summary_output,
+                "status": "done"
+            }
+        )
+
+if __name__ == "__main__":
+    main()

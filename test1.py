@@ -11,12 +11,12 @@ IMAGE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/image
 IMG_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/features/img_features"
 AUDIO_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/features/audio_features"
 
-def detect_violence(img_dir, audio_path, fps):
+def detect_violence(list_img_dir, audio_list_path, fps):
     #Image Feature Extraction
-    img_feature_extractor = ImageFeatureExtractor(root=img_dir) 
+    img_feature_extractor = ImageFeatureExtractor(list_img_dir=list_img_dir) 
     rgb_feature_files, elapsed_frames = img_feature_extractor.extract_image_features()
     #Audio Feature Extraction
-    audio_feature_extractor = AudioFeatureExtractor(audio_path, feature_save_path=AUDIO_FEATURE_PATH)
+    audio_feature_extractor = AudioFeatureExtractor(audio_list_path, feature_save_path=AUDIO_FEATURE_PATH)
     audio_feature_files = audio_feature_extractor.extract_audio_features()
     pred = infer(rgb_feature_files, audio_feature_files)
     elapsed_seconds = np.array(elapsed_frames)/fps
@@ -58,13 +58,15 @@ def post_predictions(pred, elapsed_seconds, threshold=0.7):
             print(str(start) + " -> " + str(end))
 
 if __name__ == "__main__":
-    video_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/dataset/porn/video dataset/other videos/Jennifer Lawrence naked scene in No Hard Feelings _ 2023 _ Hot Nude.mp4'
+    video_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/videos/Mission.Impossible.Fallout.2018__#02-03-50_02-04-35_label_B1-0-0.mp4'
     # video_path = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/videos/Sin.City.2005__#0-10-40_0-11-40_label_B2-0-0.mp4"
-    # fps, img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
-    # audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
+    fps, img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
+    list_img_dir = [img_dir]
+    audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
+    audio_list_path = [audio_path]
             
-    # pred, elapsed_seconds = detect_violence(img_dir, audio_path, fps)
-    # post_predictions(pred, elapsed_seconds)
-    pred, time = detect_pornography(video_path)
-    print(pred)
-    post_predictions(pred, time, threshold=0.5)
+    pred, elapsed_seconds = detect_violence(list_img_dir, audio_list_path, fps)
+    post_predictions(pred, elapsed_seconds)
+    #pred, time = detect_pornography(video_path)
+    # print(pred)
+    # post_predictions(pred, time, threshold=0.5)

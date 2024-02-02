@@ -17,6 +17,7 @@ def infer(rgb_list_file, audio_list_file):
     test_loader = DataLoader(Dataset(args, rgb_list_file, audio_list_file, test_mode=True),
                               batch_size=5, shuffle=False,
                               num_workers=args.workers, pin_memory=True)
+    
     model = Model(args)
     model = model.to(args.device)
     model_dict = model.load_state_dict(
