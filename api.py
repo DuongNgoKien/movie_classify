@@ -4,7 +4,6 @@ import requests
 import time
 import torch
 import menovideo.menovideo as menoformer
-import detect_violence
 import opennsfw2 as n2
 import numpy as np
 
@@ -17,7 +16,7 @@ from inference_detect import sentiment_analysis_inference
 from summary import summary_infer
 from pipeline.audio_feature_extract import AudioFeatureExtractor
 from pipeline.image_feature_extract import ImageFeatureExtractor
-from pipeline.violence_detect import infer
+from pipeline import violence_detect, smoke_drunk_detect
 from pytorchi3d.mp4_to_jpg import convert_mp4_to_jpg
 from torchvggish.torchvggish.mp4_to_wav import convert_mp4_to_avi
 
@@ -101,6 +100,7 @@ def analysis_process():
                 content_id=content_id,
                 category_id=category_id
             )
+            
         else:
             classify_image(
                 video_path=video_path,
@@ -296,10 +296,10 @@ def classify_image(video_path, command_id, content_id):
     audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
     
     pred, elapsed_seconds = detect_violence(img_dir, audio_path, fps)
-    post_predictions(pred, elapsed_seconds, category_api, command_id, content_id, category_id='2', content='Bao luc')
+    post_predictions(pred, command_id, elapsed_seconds, category_api, command_id, content_id, category_id='2', content='Bao luc')
     
     pred, elapsed_seconds = detect_pornography(video_path)
-    post_predictions(pred, elapsed_seconds, category_api, command_id, content_id, category_id='4', content='Khieu dam')
+    post_predictions(pred, command_id, elapsed_seconds, category_api, command_id, content_id, category_id='4', content='Khieu dam')
     
     update_status(
         type="command_status", command_id=command_id, status="Done"
@@ -318,19 +318,18 @@ def update_status(type, command_id, status):
     requests.put(api)
 
 
-def detect_violence(img_dir, audio_path, fps):
+def detect_violence(list_img_dir, audio_list_path, fps):
     #Image Feature Extraction
-    img_feature_extractor = ImageFeatureExtractor(root=img_dir) 
+    img_feature_extractor = ImageFeatureExtractor(list_img_dir=list_img_dir) 
     rgb_feature_files, elapsed_frames = img_feature_extractor.extract_image_features()
     #Audio Feature Extraction
     audio_feature_extractor = AudioFeatureExtractor(
-        audio_path,
+        audio_list_path,
         feature_save_path=AUDIO_FEATURE_PATH
     )
     audio_feature_files = audio_feature_extractor.extract_audio_features()
-    pred = infer(rgb_feature_files, audio_feature_files)
+    pred = violence_detect.infer(rgb_feature_files, audio_feature_files)
     elapsed_seconds = np.array(elapsed_frames)/fps
-    
     return pred, elapsed_seconds
 
  
@@ -344,9 +343,9 @@ def detect_pornography(video_path):
 
 def post_predictions(
     pred,
+    command_id,
     elapsed_seconds,
     api,
-    video_id,
     content_id,
     category_id,
     content,
@@ -375,7 +374,7 @@ def post_predictions(
                 avg_prob = sum_prob/count
                 if avg_prob >= threshold:
                     json_data = {
-                        "command_id": video_id,
+                        "command_id": command_id,
                         "category_id": category_id, 
                         'content_id': content_id, 
                         'timespan': start + " --> " + end,
@@ -393,7 +392,7 @@ def post_predictions(
         avg_prob = sum_prob/count
         if avg_prob >= threshold:
             json_data = {
-                'command_id': video_id,
+                'command_id': command_id,
                 'category_id': category_id,
                 'content_id': content_id, 
                 'timespan': start + " --> " + end,
@@ -401,7 +400,6 @@ def post_predictions(
                 'detect_from': 'image',
                 'threshold': avg_prob
             }
-            print(json_data)
             requests.post(api, json = json_data)
 
 

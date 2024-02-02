@@ -10,6 +10,8 @@ import h5py
 import os
 import os.path
 
+import ntpath
+
 import cv2
 import glob
 
@@ -27,10 +29,11 @@ def video_to_tensor(pic):
     return torch.from_numpy(pic.transpose([3, 0, 1, 2]))
 
 
-def load_rgb_frames(image_dir, vid, start, num):
+def load_rgb_frames(image_dir, vid, start, end):
     frames = []
     count = 0
-    for i in range(start, start + num):
+    
+    for i in range(start, end+1):
         img = cv2.imread(
             os.path.join(image_dir, "image-" + str(i).zfill(6) + ".jpg")
         )[:, :, [2, 1, 0]]
@@ -110,27 +113,27 @@ def get_duration(video_start, video_end):
     return dif_hour * 3600 + dif_min * 60 + dif_sec
 
 
-def make_video_level_dataset(root, isTrain, num_classes=157):
+def make_video_level_dataset(list_img_dir, isTrain, num_ignore_frame=0):
     # split_file = split
     # split='testing'
-
     dataset = []
-
-    files = [root.replace('images', 'videos', 1)+".mp4"]
+    files = list_img_dir
+    
     # print(files)
     for file_path in files:
-        file_name = file_path.split("/")[-1]
+        file_name = ntpath.basename(file_path)
         if isTrain:
-            violence_flag = file_name.split("label_")[-1]
+            violence_flag = ntpath.basename(file_path)
             violence_flag = violence_flag.split(".")[0]
 
-        cap = cv2.VideoCapture(file_path)
-        fps = cap.get(5)
-        num_frames = int(cap.get(7) / fps * 24)
+        print(file_path)
+        #fps = cap.get(5)
+        num_frames = int(len(os.listdir(file_path))) - num_ignore_frame
         duration = num_frames / 24
+        print(num_frames)
         # duration = get_duration(video_start, video_end)
 
-        label = np.zeros((num_frames), np.float32)
+        label = np.zeros((num_frames-1), np.float32)
         if isTrain:
             if violence_flag[0] == "B":  
                 for fr in range(0, num_frames):
@@ -138,18 +141,18 @@ def make_video_level_dataset(root, isTrain, num_classes=157):
             elif violence_flag[0] == "A":  
                 for fr in range(0, num_frames):
                     label[fr] = 0
-        dataset.append((file_name[:-4], label, duration, num_frames))
+        dataset.append((file_name, label, duration, num_frames))
 
     return dataset
 
 
 class Charades(data_utl.Dataset):
-    def __init__(self, root, mode, isTrain=True, save_dir="", num=0):
+    def __init__(self, list_img_dir, mode, isTrain=False, save_dir="", num_ignore_frame=327):
 
-        self.data = make_video_level_dataset(root, isTrain)
+        self.data = make_video_level_dataset(list_img_dir, isTrain, num_ignore_frame)
         # self.data = make_dataset(split_file, split, root, mode)
         self.mode = mode
-        self.root = root
+        self.list_img_dir = list_img_dir
         self.save_dir = save_dir
 
     def __getitem__(self, index):
@@ -164,12 +167,12 @@ class Charades(data_utl.Dataset):
         # if os.path.exists(os.path.join(self.save_dir, vid + "__0.npy")):
         #     return 0, 0, 0
 
-        if self.mode == "rgb":
-            imgs = load_rgb_frames(self.root, vid, 1, nf)
-        else:
-            imgs = load_flow_frames(self.root, vid, 1, nf)
+        # if self.mode == "rgb":
+        #     imgs = load_rgb_frames(os.path.join(self.root, vid), vid, 1, nf)
+        # else:
+        #     imgs = load_flow_frames(self.root, vid, 1, nf)
 
-        return imgs, torch.from_numpy(label), vid
+        return self.list_img_dir[index], torch.from_numpy(label), vid, nf
 
     def __len__(self):
         return len(self.data)
