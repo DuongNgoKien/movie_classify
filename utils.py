@@ -97,6 +97,7 @@ def whisper_infer(audio_path, language="vi", sub_file_path=""):
     transcribe = model.transcribe(
         audio_path,
         verbose=True,
+        language=language,
         fp16=True
     )
     
@@ -174,9 +175,6 @@ def translation(text, language="vietnamese", sub_file_path=""):
             # delete tokenizer and model and
             del tokenizer
             del model
-            
-            with open(sub_file_path, "w", encoding="utf-8") as sub_f:
-                sub_f.write(en_texts)
                 
             return en_texts
         
@@ -201,15 +199,13 @@ def translation(text, language="vietnamese", sub_file_path=""):
                     output_ids,
                     skip_special_tokens=True
                 )
-                english_texts.append(en_texts)
+                english_texts.append(en_texts[0])
             
             # delete tokenizer and model and
             del tokenizer
             del model
-            
+
             results = "\n".join(english_texts)
-            with open(sub_file_path, "w", encoding="utf-8") as sub_f:
-                sub_f.write()
             
             return results
                 
@@ -247,9 +243,6 @@ def translation(text, language="vietnamese", sub_file_path=""):
             del tokenizer
             del model
             
-            with open(sub_file_path, "w", encoding="utf-8") as sub_f:
-                sub_f.write(en_texts)
-            
             return english_texts
         
         else:
@@ -276,8 +269,6 @@ def translation(text, language="vietnamese", sub_file_path=""):
             del model
             
             results = "\n".join(english_texts)
-            with open(sub_file_path, "w", encoding="utf-8") as sub_f:
-                sub_f.write()
             
             return results
     else:

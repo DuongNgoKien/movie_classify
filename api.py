@@ -52,8 +52,7 @@ def analysis_process():
         # get content information
         content_id = content["content_id"]
         category_id = content["category_id"]
-        video_id = content["id"]
-        
+        command_id = content["id"]
         content_info = requests.get(
             f"{ROOT_API}/content/get_by_id/{content_id}"
         ).json()
@@ -74,7 +73,7 @@ def analysis_process():
             except:
                 update_status(
                     type="command_status",
-                    video_id=video_id,
+                    command_id=command_id,
                     status="Dowload error"
                 )
         
@@ -83,7 +82,7 @@ def analysis_process():
         
         if content_type == "speech":
             speech(
-                video_id=video_id, 
+                command_id=command_id, 
                 video_path=video_path,
                 language=language,
                 content_id=content_id
@@ -92,11 +91,11 @@ def analysis_process():
             classify_text(
                 content_id=content_id,
                 category_id=category_id,
-                video_id=video_id
+                command_id=command_id
             )
         elif content_type == "speech_and_classify_text":
             speech_and_classify_text(
-                video_id=video_id,
+                command_id=command_id,
                 video_path=video_path,
                 language=language,
                 content_id=content_id,
@@ -105,15 +104,15 @@ def analysis_process():
         else:
             classify_image(
                 video_path=video_path,
-                video_id=video_id,
+                command_id=command_id,
                 content_id=content_id
             )
         
         
-def classify_text(content_id, category_id, video_id):
+def classify_text(content_id, category_id, command_id):
     # update status
     update_status(
-        type="command_status", video_id=video_id, status="Processing"
+        type="command_status", command_id=command_id, status="Processing"
     )
     analysis_update_api = f"{ROOT_API}/content_category/create"
     
@@ -138,34 +137,34 @@ def classify_text(content_id, category_id, video_id):
             }
             requests.post(url=analysis_update_api, json=text_analysis_data)
         update_status(
-            type="command_status", video_id=video_id, status="Done"
+            type="command_status", command_id=command_id, status="Done"
         )
         update_status(
-            type="content_status", video_id=video_id, status="Done"
+            type="content_status", video_id=content_id, status="Done"
         )
     
     except Exception as e:
         update_progress_status(
-            video_id=video_id,
+            command_id=command_id,
             process_percent=100,
             note=f"{e}"
         )
 
 
 def speech(
-    video_id,
+    command_id,
     video_path,
     language,
     content_id,
 ):
     update_status(
-        type="command_status", video_id=video_id, status="Processing"
+        type="command_status", command_id=command_id, status="Processing"
     )
     
     # convert mp4 to audio and update progress status
     audio_path = audio_extract(video_path)
     update_progress_status(
-        video_id=video_id,
+        command_id=command_id,
         note="Convert video to audio done. Convert audio to text now.",
         process_percent=10
     )
@@ -175,7 +174,7 @@ def speech(
     
     # update progress status
     update_progress_status(
-        video_id=video_id,
+        command_id=command_id,
         note="Convert video to audio done.",
         process_percent=100
     )
@@ -193,25 +192,25 @@ def speech(
     )
     
     # update command and content status
-    update_status(type="command_status", video_id=video_id, status="done")
-    update_status(type="content_status", video_id=video_id, status="done")
+    update_status(type="command_status", command_id=command_id, status="done")
+    update_status(type="content_status", command_id=command_id, status="done")
 
 
 def speech_and_classify_text(
-    video_id,
+    command_id,
     video_path,
     language,
     content_id,
     category_id
 ):
     update_status(
-        type="command_status", video_id=video_id, status="Processing"
+        type="command_status", command_id=command_id, status="Processing"
     )
     
     # Convert mp4 to audio and update progress status
     audio_path = audio_extract(video_path)
     update_progress_status(
-        video_id=video_id,
+        command_id=command_id,
         note="Convert video to audio done. Convert audio to text now.",
         process_percent=10
     )
@@ -224,7 +223,7 @@ def speech_and_classify_text(
     
     # update progress status
     update_progress_status(
-        video_id=video_id,
+        command_id=command_id,
         note="Speech to text done.",
         process_percent=70
     )
@@ -234,6 +233,7 @@ def speech_and_classify_text(
     requests.post(
         speech2text_update_api,
         json = {
+            "command_id": command_id,
             "content_id": content_id,
             "script": speech2text_result,
             "language": language,
@@ -257,7 +257,7 @@ def speech_and_classify_text(
     print(text_analysis_results)
     # update progress status
     update_progress_status(
-        video_id=video_id,
+        command_id=command_id,
         note="Text analysis done.",
         process_percent=100
     )
@@ -267,6 +267,7 @@ def speech_and_classify_text(
     
     for text_analysis_result in text_analysis_results:
         text_analysis_data = {
+            "command_id": command_id,
             "content_id": content_id,
             "category_id": category_id,
             "timespan": text_analysis_result["time"],
@@ -278,16 +279,16 @@ def speech_and_classify_text(
     
     # update command and content status
     update_status(
-        type="command_status", video_id=video_id, status="Done"
+        type="command_status", command_id=command_id, status="Done"
     )
     update_status(
-        type="content_status", video_id=video_id, status="Done"
+        type="content_status", command_id=command_id, status="Done"
     )
 
 
-def classify_image(video_path, video_id, content_id):
+def classify_image(video_path, command_id, content_id):
     update_status(
-        type="command_status", video_id=video_id, status="Processing"
+        type="command_status", command_id=command_id, status="Processing"
     )
     # process image analysis
     category_api = f"{ROOT_API}/content_category/create"
@@ -295,26 +296,25 @@ def classify_image(video_path, video_id, content_id):
     audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
     
     pred, elapsed_seconds = detect_violence(img_dir, audio_path, fps)
-    post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='2', content='Bao luc')
+    post_predictions(pred, elapsed_seconds, category_api, command_id, content_id, category_id='2', content='Bao luc')
     
     pred, elapsed_seconds = detect_pornography(video_path)
-    post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='4', content='Khieu dam')
+    post_predictions(pred, elapsed_seconds, category_api, command_id, content_id, category_id='4', content='Khieu dam')
     
     update_status(
-        type="command_status", video_id=video_id, status="Done"
+        type="command_status", command_id=command_id, status="Done"
     )
     update_status(
-        type="content_status", video_id=video_id, status="Done"
+        type="content_status", command_id=command_id, status="Done"
     )
 
 
-def update_status(type, video_id, status):
+def update_status(type, command_id, status):
     api = (
         COMMAND_UPDATE_STATUS_API if type == "command_status"
         else CONTENT_UPDATE_STATUS_API
     )
-    api = f"{api}?id={video_id}&status={status}"
-    print(api)
+    api = f"{api}?id={command_id}&status={status}"
     requests.put(api)
 
 
@@ -375,6 +375,7 @@ def post_predictions(
                 avg_prob = sum_prob/count
                 if avg_prob >= threshold:
                     json_data = {
+                        "command_id": video_id,
                         "category_id": category_id, 
                         'content_id': content_id, 
                         'timespan': start + " --> " + end,
@@ -392,6 +393,7 @@ def post_predictions(
         avg_prob = sum_prob/count
         if avg_prob >= threshold:
             json_data = {
+                'command_id': video_id,
                 'category_id': category_id,
                 'content_id': content_id, 
                 'timespan': start + " --> " + end,
@@ -403,11 +405,11 @@ def post_predictions(
             requests.post(api, json = json_data)
 
 
-def update_progress_status(video_id, process_percent, note):
+def update_progress_status(command_id, process_percent, note):
     requests.put(
         f"{ROOT_API}/content_command/update_progress",
         params={
-            "id": video_id,
+            "id": command_id,
             "new_note": note,
             "progress": process_percent
         }
