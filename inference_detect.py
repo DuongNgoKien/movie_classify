@@ -4,79 +4,58 @@ import pandas as pd
 import pysrt
 import json
 import random
+import re
 from transformers import (
     BertForSequenceClassification,
     AutoTokenizer
 )
 
+# category_id = random.randint(1, 12)
+threshold = 0.7
+def extract_subtitle_info(text: str) -> list:
+    """
+    Extract the time and text from the subtitle text.
+    
+    Args:
+    text (str): The original subtitle text
+    
+    Returns:
+    list: A list of tuples containing the time and text for each subtitle line
+    """
+    subtitle_info = re.findall(r'(\d+:\d+:\d+,\d+) --> (\d+:\d+:\d+,\d+)\n(.+)', text)
+    return subtitle_info
 
-category_id = random.randint(1, 12)
 
-
-def sentiment_analysis_inference(category_id, sub_file_path):
-
+def sentiment_analysis_inference(category_id, sub_script):
     """Text sentiment analysis inferences.
 
     Args:
         sub_file_path (str or like_path): path to sub file.
+    Category id :
+    1. Action
+    4. Sexism
+    5. Horror
+    6. Racist
+    10. Political
+    11. Religious
+    12. Toxic
     """
+    
     # get sub
-    subs = pysrt.open(sub_file_path)
-
+    
+    # subs = pysrt.open(sub_file_path)
+    subtitle_info = extract_subtitle_info(sub_script)
+    
     # initial tokenizer and model
-    if category_id == 5:
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-horror-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-horror-pytorch"
-        ).to("cuda")
-
-    elif category_id == 10:
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-political-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-political-pytorch"
-        ).to("cuda")
-
-    elif category_id == 11:
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-religious-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-religious-pytorch"
-        ).to("cuda")
-
-    elif category_id == 9 or category_id == 8 or category_id == 7:
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-toxic-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-toxic-pytorch"
-        ).to("cuda")
-
-    elif category_id == 6:
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-racism-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-racism-pytorch"
-        ).to("cuda")
-
-    elif category_id == 4 or category_id == 2:
-        tokenizer = AutoTokenizer.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-sexism-pytorch"
-        )
-        model = BertForSequenceClassification.from_pretrained(
-            "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-sexism-pytorch"
-        ).to("cuda")
+    path_to_model = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-{}-pytorch".format(category_id)
+    tokenizer = AutoTokenizer.from_pretrained(path_to_model)
+    model = BertForSequenceClassification.from_pretrained(path_to_model).to("cuda")
 
     # get sentiment-analysis results
     results = []
-    for sub in subs:
+    for sub in subtitle_info:
         inputs = tokenizer(
-            sub.text,
+            sub[2],
             padding=True,
             truncation=True,
             max_length=512,
@@ -86,19 +65,21 @@ def sentiment_analysis_inference(category_id, sub_file_path):
         probs = outputs[0].softmax(1)
         pred_label_idx = probs.argmax()
         pred_label = model.config.id2label[pred_label_idx.item()]
-        probability = "{:2f}".format(probs[0][pred_label_idx.item()].item())
+        probability = int(probs[0][pred_label_idx.item()].item()*100)
         result = {
             'pred_label_idx': pred_label_idx.item(),
             'pred_label': pred_label,
-            'text': sub.text,
-            'time': "{}:{:02d}:{:02d},{:02d} --> {}:{:02d}:{:02d},{:02d}".format(
-                sub.start.hours, sub.start.minutes, sub.start.seconds, sub.start.milliseconds,
-                sub.end.hours, sub.end.minutes, sub.end.seconds, sub.end.milliseconds),
+            'text': sub[2],
+            'time': "{} --> {}".format(sub[0], sub[1]),
             'probability': probability
         }
-        if float(probability) >= 0.7 and pred_label_idx.item() == 1:
+        # if the probability is greater than threshold and the label is True, add the result to the list
+        if (
+            probability >= threshold 
+            and pred_label_idx.item() == 1
+        ):
             results.append(result)
-
+    # delete the model and tokenizer to free GPU
     del model
     del tokenizer
 

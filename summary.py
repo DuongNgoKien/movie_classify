@@ -6,8 +6,8 @@ from transformers import (AutoTokenizer, AutoModelForSeq2SeqLM)
 import re
 nltk.download('punkt')
 ROOT_API = "http://183.81.35.24:32774"
-CONTENT_SCRIPT_UPDATE_STATUS_API = f"{ROOT_API}/Content_Script/Update_Status"
-CONTENT_SCRIPT_UPDATE_API = f"{ROOT_API}/Content_Script/Update"
+CONTENT_COMMAND_UPDATE_STATUS_API = f"{ROOT_API}/Content_Command/Update_Status"
+CONTENT_CATEGORY_UPDATE_API = f"{ROOT_API}/Content_Category/Create"
 
 
 def summary_infer(script):
@@ -21,6 +21,7 @@ def summary_infer(script):
         return summary file save path for api inferences.
     """
     outputs_list = []
+    # Choose the process step based on the input is text or file
 #    subs = pysrt.open(file_path)
     first_text = script
     texts = re.sub(r'\d+:\d+:\d+,\d+ --> \d+:\d+:\d+,\d+\n', '', first_text)
@@ -71,15 +72,17 @@ def summary_infer(script):
 
     return outputs_list
 
+
 def update_status(id, content_id, status):
     api = (
-        CONTENT_SCRIPT_UPDATE_STATUS_API
+        CONTENT_COMMAND_UPDATE_STATUS_API
     )
     requests.post(
         api, json={"id": id, "content_id": content_id, "status": status})
-    
+
+
 def main():
-    content_list = requests.get(f"{ROOT_API}/Content_Script/Get_Wait")
+    content_list = requests.get(f"{ROOT_API}/Content_Command/Get_Wait")
     content_list = content_list.json()
     content_list = [
         content for content in content_list if content["status"] == "wait"
@@ -87,11 +90,13 @@ def main():
     for content in content_list:
         id = content["id"]
         content_id = content["content_id"]
-        content_script = content["script"]
+        command = content["command"]
+        content_script = requests.get(
+            f"{ROOT_API}/Content_Script/Get_By_Content_Id/{content_id}"
+        ).json()["script"]
 
         update_status(
             id=id,
-            content_id=content_id,
             status="processing"
         )
 
@@ -101,13 +106,18 @@ def main():
         )
         # post result
         requests.post(
-            CONTENT_SCRIPT_UPDATE_API,
+            CONTENT_CATEGORY_UPDATE_API,
             json={
+                "id": id,
                 "content_id": content_id,
-                "summarize": summary_output,
-                "status": "done"
+                "content": summary_output
             }
         )
+        update_status(
+            id=id,
+            status="done"
+        )
+
 
 if __name__ == "__main__":
     main()

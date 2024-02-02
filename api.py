@@ -45,30 +45,31 @@ def analysis_process():
     # get all content wait list
     content_list = requests.get(f"{ROOT_API}/content_command/get_wait")
     content_list = content_list.json()
-    content_list = [
-        content for content in content_list if content["status"] == "wait"
-    ]
+
     # processing
     for content in content_list:  
         # get content information
         content_id = content["content_id"]
         category_id = content["category_id"]
         video_id = content["id"]
-        # language = LANGUAGES[content["language"]]
-        language = "en"
         
         content_info = requests.get(
             f"{ROOT_API}/content/get_by_id/{content_id}"
         ).json()
+        language = content_info["language"]
+        
         # check path and download if not exists.
         video_path = content_info["path"]
-        print(f"Video_path: {video_path}")
+
         if not os.path.exists(video_path):
             try:
                 video_url = content_info["url"]
                 title = content_info["title"].replace(" ", "_")
-                os.system(f"wget -O {title}.mp4 {video_url} -P {VIDEO_PATH}")
                 video_path = f"{VIDEO_PATH}/{title}.mp4"
+                if not os.path.exists(video_path):
+                    os.system(
+                        f"wget -O {video_path} {video_url}"
+                    )
             except:
                 update_status(
                     type="command_status",
@@ -149,11 +150,9 @@ def analysis_process():
             # process image analysis
             category_api = f"{ROOT_API}/Category_Content/create"
             fps, img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
-            list_img_dir = [img_dir]
             audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
-            audio_list_path = [audio_path]
             
-            pred, elapsed_seconds = detect_violence(list_img_dir, audio_list_path, fps)
+            pred, elapsed_seconds = detect_violence(img_dir, audio_path, fps)
             post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='2', content='Bao luc')
             
             pred, elapsed_seconds = detect_pornography(video_path)
@@ -165,7 +164,6 @@ def analysis_process():
             update_status(
                 type="content_status", video_id=video_id, status="Done"
             )
-
 
 
 def update_status(type, video_id, status):
@@ -238,7 +236,7 @@ def post_predictions(
                         'timespan': start + " --> " + end,
                         'content': content, 
                         'detect_from': 'image',
-                        'analysis_threshold': avg_prob
+                        'threshold': avg_prob
                     }
                     print(json_data)
                     requests.post(api, json = json_data)
@@ -255,11 +253,21 @@ def post_predictions(
                 'timespan': start + " --> " + end,
                 'content': content, 
                 'detect_from': 'image',
-                'analysis_threshold': avg_prob
+                'threshold': avg_prob
             }
             print(json_data)
             requests.post(api, json = json_data)
-            
+
+
+def update_progress_status(video_id, process_percent, note):
+    requests.put(
+        f"{ROOT_API}/content_command/update_progress",
+        params={
+            "id": video_id,
+            "new_note": note,
+            "progress": process_percent
+        }
+    )    
             
 if __name__ == "__main__":
     analysis_process()
