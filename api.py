@@ -58,6 +58,7 @@ def analysis_process():
         content_id = content["content_id"]
         category_id = content["category_id"]
         command_id = content["id"]
+        threshold = content["threshold"]
         content_info = requests.get(
             f"{ROOT_API}/content/get_by_id/{content_id}"
         ).json()
@@ -71,7 +72,7 @@ def analysis_process():
             try:
                 video_url = content_info["url"]
                 title = content_info["title"].replace(" ", "_")
-                sub_file_path = os.path.join(SUB_PATH, f"{title}.txt")
+                sub_file_path = os.path.join(SUB_PATH, f"{title}.srt")
 
                 video_path = f"{VIDEO_PATH}/{title}.mp4"
                 if not os.path.exists(video_path):
@@ -107,7 +108,8 @@ def analysis_process():
                 video_path=video_path,
                 language=language,
                 content_id=content_id,
-                category_id=category_id
+                category_id=category_id,
+                threshold=threshold,
             )
             
         else:
@@ -222,7 +224,8 @@ def speech_and_classify_text(
     language,
     content_id,
     category_id,
-    sub_file_path
+    sub_file_path,
+    threshold
 ):
     update_status(
         type="command_status", command_id=command_id, status="Processing"
@@ -275,6 +278,7 @@ def speech_and_classify_text(
     # Do text analysis with speech2text_result           
     text_analysis_results = sentiment_analysis_inference(
         category_id,
+        threshold,
         sub_file_path
     )
 
