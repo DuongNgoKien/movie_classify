@@ -94,7 +94,7 @@ def whisper_infer(audio_path, language="vi", sub_file_path=""):
     # Load model and compute output
     model = whisper.load_model("/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/weights/whisper/large-v2.pt")
     
-    transcribe = model.transcibe(
+    transcribe = model.transcribe(
         audio_path,
         verbose=True,
         language=language,

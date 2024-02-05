@@ -10,6 +10,17 @@ CONTENT_COMMAND_UPDATE_STATUS_API = f"{ROOT_API}/Content_Command/Update_Status"
 CONTENT_CATEGORY_UPDATE_API = f"{ROOT_API}/Content_Category/Create"
 
 
+def translate_en2vi(en_texts: str,model,tokenizer) -> str:
+        input_ids = tokenizer(en_texts, padding=True, return_tensors="pt")
+        output_ids = model.generate(
+            **input_ids,
+            decoder_start_token_id=tokenizer.lang_code_to_id["vi_VN"],
+            num_return_sequences=1,
+            num_beams=5,
+            early_stopping=True
+        )
+        vi_texts = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+        return vi_texts
 def summary_infer(script):
     """Summary inferences.
 
@@ -26,9 +37,9 @@ def summary_infer(script):
     first_text = script
     texts = re.sub(r'\d+:\d+:\d+,\d+ --> \d+:\d+:\d+,\d+\n', '', first_text)
 #   texts = script.strip("\n")
-    tokenizer = AutoTokenizer.from_pretrained(
-        "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-bart-large-cnn"
-    )
+
+    path_sum = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-bart-large-cnn"
+    tokenizer = AutoTokenizer.from_pretrained(path_sum)
     sentences = nltk.tokenize.sent_tokenize(texts)
 
     # seperate the file if the file is too long compare to the model
@@ -58,9 +69,7 @@ def summary_infer(script):
         tokenizer(chunk, return_tensors="pt").to("cuda") for chunk in chunks
     ]
 
-    model = AutoModelForSeq2SeqLM.from_pretrained(
-        "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-bart-large-cnn"
-    ).to("cuda")
+    model = AutoModelForSeq2SeqLM.from_pretrained(path_sum).to("cuda")
 
     for input in inputs:
         # generate text summary
@@ -69,9 +78,19 @@ def summary_infer(script):
         outputs_list.append(text_summary)
 
     del tokenizer, model
+    
+    path_trans = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/models--vinai--vinai-translate-en2vi-v2"
+    tokenizer_1 = AutoTokenizer.from_pretrained(path_trans)
+    model_1 = AutoModelForSeq2SeqLM.from_pretrained(path_trans).to("cuda")
 
-    return outputs_list
-
+    trans_list = []
+    for trans in outputs_list:
+        trans_list.append(translate_en2vi(trans,model=model_1,tokenizer=tokenizer_1))
+    
+    joined_text = '.'.join([sub[0] for sub in trans_list])
+    
+    del tokenizer_1, model_1
+    return joined_text
 
 def update_status(id, content_id, status):
     api = (
