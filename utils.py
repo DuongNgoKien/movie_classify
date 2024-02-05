@@ -94,7 +94,7 @@ def whisper_infer(audio_path, language="vi", sub_file_path=""):
     # Load model and compute output
     model = whisper.load_model("/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/weights/whisper/large-v2.pt")
     
-    transcribe = model.transcribe(
+    transcribe = model.transcibe(
         audio_path,
         verbose=True,
         language=language,
@@ -123,8 +123,8 @@ def whisper_infer(audio_path, language="vi", sub_file_path=""):
         )
         result += segment
         
-        # with open(sub_file_path, "a", encoding="utf-8") as sub_f:
-        #     sub_f.write(segment)
+    # write sub_file
+    write_sub_file(sub_file_path, result) 
             
     return result
 
@@ -172,6 +172,9 @@ def translation(text, language="vietnamese", sub_file_path=""):
             # decode ids to text
             en_texts = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
             
+            # write sub_file for text analysis
+            write_sub_file(sub_file_path, en_texts)
+            
             # delete tokenizer and model and
             del tokenizer
             del model
@@ -206,6 +209,9 @@ def translation(text, language="vietnamese", sub_file_path=""):
             del model
 
             results = "\n".join(english_texts)
+            
+            # write sub_file for text analysis
+            write_sub_file(sub_file_path, results)
             
             return results
                 
@@ -243,6 +249,9 @@ def translation(text, language="vietnamese", sub_file_path=""):
             del tokenizer
             del model
             
+            # write sub_file for text analysis
+            write_sub_file(sub_file_path, english_texts)
+            
             return english_texts
         
         else:
@@ -270,6 +279,9 @@ def translation(text, language="vietnamese", sub_file_path=""):
             
             results = "\n".join(english_texts)
             
+            # write sub_file for text_analysis
+            write_sub_file(sub_file_path, results)
+            
             return results
     else:
         raise NotImplementedError(f"Language {language} not supported yet!")
@@ -285,7 +297,13 @@ def timestamp_format(milliseconds):
     milliseconds -= seconds * 1000
     
     return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
-  
+
+
+def write_sub_file(sub_file_path, text):
+    assert os.path.exists(sub_file_path), "Sub file path is not exists."
+    
+    with open(sub_file_path, "w", encoding="utf-8") as sub_f:
+        sub_f.write(text)
 
 if __name__ == "__main__":
     print(timestamp_format(1000000))

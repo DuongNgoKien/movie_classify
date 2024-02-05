@@ -11,7 +11,13 @@ from transformers import pipeline,AutoTokenizer,AutoModelForSeq2SeqLM
 from waitress import serve
 from flask import Flask, request, Response
 
-from utils import audio_extract, whisper_infer, translation, timestamp_format
+from utils import (
+    audio_extract, 
+    whisper_infer,
+    translation,
+    timestamp_format,
+    write_sub_file
+)
 from inference_detect import sentiment_analysis_inference
 from summary import summary_infer
 from pipeline.audio_feature_extract import AudioFeatureExtractor
@@ -60,10 +66,13 @@ def analysis_process():
         # check path and download if not exists.
         video_path = content_info["path"]
 
+        #
         if not os.path.exists(video_path):
             try:
                 video_url = content_info["url"]
                 title = content_info["title"].replace(" ", "_")
+                sub_file_path = os.path.join(SUB_PATH, f"{title}.txt")
+
                 video_path = f"{VIDEO_PATH}/{title}.mp4"
                 if not os.path.exists(video_path):
                     os.system(
@@ -109,7 +118,7 @@ def analysis_process():
             )
         
         
-def classify_text(content_id, category_id, command_id):
+def classify_text(content_id, category_id, command_id, language, sub_file_path):
     # update status
     update_status(
         type="command_status", command_id=command_id, status="Processing"
@@ -122,9 +131,14 @@ def classify_text(content_id, category_id, command_id):
             f"{ROOT_API}/content_script/get_by_content_id/{content_id}"
         ).json()
         speech2text_result = content_info["script"]
+        if language != "en":
+            results = translation(speech2text_result, language, sub_file_path)
+        else:
+            write_sub_file(sub_file_path, speech2text_result)
+        
         text_analysis_results = sentiment_analysis_inference(
             category_id,
-            speech2text_result
+            sub_file_path
         )
         for text_analysis_result in text_analysis_results:
             text_analysis_data = {
@@ -148,6 +162,12 @@ def classify_text(content_id, category_id, command_id):
             command_id=command_id,
             process_percent=100,
             note=f"{e}"
+        )
+        update_status(
+            type="command_status", command_id=command_id, status="Error"
+        )
+        update_status(
+            type="content_status", command_id=command_id, status="Error"
         )
 
 
@@ -201,7 +221,8 @@ def speech_and_classify_text(
     video_path,
     language,
     content_id,
-    category_id
+    category_id,
+    sub_file_path
 ):
     update_status(
         type="command_status", command_id=command_id, status="Processing"
@@ -219,6 +240,7 @@ def speech_and_classify_text(
     speech2text_result = whisper_infer(
         audio_path,
         language,
+        sub_file_path
     )
     
     # update progress status
@@ -247,14 +269,15 @@ def speech_and_classify_text(
         speech2text_result = translation(
             speech2text_result,
             language=language,
+            sub_file_path=sub_file_path
         )
     
     # Do text analysis with speech2text_result           
     text_analysis_results = sentiment_analysis_inference(
         category_id,
-        speech2text_result
+        sub_file_path
     )
-    print(text_analysis_results)
+
     # update progress status
     update_progress_status(
         command_id=command_id,
@@ -293,6 +316,7 @@ def classify_image(video_path, command_id, content_id):
     # process image analysis
     category_api = f"{ROOT_API}/content_category/create"
     fps, img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
+    
     audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
     
     pred, elapsed_seconds = detect_violence(img_dir, audio_path, fps)
@@ -329,7 +353,8 @@ def detect_violence(list_img_dir, audio_list_path, fps):
     )
     audio_feature_files = audio_feature_extractor.extract_audio_features()
     pred = violence_detect.infer(rgb_feature_files, audio_feature_files)
-    elapsed_seconds = np.array(elapsed_frames)/fps
+    elapsed_seconds = np.array(elapsed_frames) / fps
+    
     return pred, elapsed_seconds
 
  
@@ -414,4 +439,5 @@ def update_progress_status(command_id, process_percent, note):
     )    
             
 if __name__ == "__main__":
-    analysis_process()
+    while True:
+        analysis_process()
