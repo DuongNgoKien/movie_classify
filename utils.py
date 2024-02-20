@@ -97,6 +97,7 @@ def whisper_infer(audio_path, language="vi", sub_file_path=""):
     transcribe = model.transcribe(
         audio_path,
         verbose=True,
+        language=language,
         fp16=True
     )
     
@@ -122,8 +123,8 @@ def whisper_infer(audio_path, language="vi", sub_file_path=""):
         )
         result += segment
         
-        # with open(sub_file_path, "a", encoding="utf-8") as sub_f:
-        #     sub_f.write(segment)
+    # write sub_file
+    write_sub_file(sub_file_path, result) 
             
     return result
 
@@ -171,12 +172,12 @@ def translation(text, language="vietnamese", sub_file_path=""):
             # decode ids to text
             en_texts = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
             
+            # write sub_file for text analysis
+            write_sub_file(sub_file_path, en_texts)
+            
             # delete tokenizer and model and
             del tokenizer
             del model
-            
-            with open(sub_file_path, "w", encoding="utf-8") as sub_f:
-                sub_f.write(en_texts)
                 
             return en_texts
         
@@ -201,15 +202,16 @@ def translation(text, language="vietnamese", sub_file_path=""):
                     output_ids,
                     skip_special_tokens=True
                 )
-                english_texts.append(en_texts)
+                english_texts.append(en_texts[0])
             
             # delete tokenizer and model and
             del tokenizer
             del model
-            
+
             results = "\n".join(english_texts)
-            with open(sub_file_path, "w", encoding="utf-8") as sub_f:
-                sub_f.write()
+            
+            # write sub_file for text analysis
+            write_sub_file(sub_file_path, results)
             
             return results
                 
@@ -247,8 +249,8 @@ def translation(text, language="vietnamese", sub_file_path=""):
             del tokenizer
             del model
             
-            with open(sub_file_path, "w", encoding="utf-8") as sub_f:
-                sub_f.write(en_texts)
+            # write sub_file for text analysis
+            write_sub_file(sub_file_path, english_texts)
             
             return english_texts
         
@@ -276,8 +278,9 @@ def translation(text, language="vietnamese", sub_file_path=""):
             del model
             
             results = "\n".join(english_texts)
-            with open(sub_file_path, "w", encoding="utf-8") as sub_f:
-                sub_f.write()
+            
+            # write sub_file for text_analysis
+            write_sub_file(sub_file_path, results)
             
             return results
     else:
@@ -294,7 +297,13 @@ def timestamp_format(milliseconds):
     milliseconds -= seconds * 1000
     
     return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
-  
+
+
+def write_sub_file(sub_file_path, text):
+    assert os.path.exists(sub_file_path), "Sub file path is not exists."
+    
+    with open(sub_file_path, "w", encoding="utf-8") as sub_f:
+        sub_f.write(text)
 
 if __name__ == "__main__":
     print(timestamp_format(1000000))
