@@ -4,7 +4,7 @@ from torch.autograd import Variable
 from torchvision import transforms
 import numpy as np
 
-import os, sys, shutil
+import os, sys, shutil, glob
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
@@ -64,7 +64,12 @@ class ImageFeatureExtractor:
             root, name = root[0], name[0]
             nf = nf.item()
             remain_nf = nf
-            if name == 0:
+            if root == 0:
+                saved_list.append(os.path.join(self.save_dir, name+'__0.npy'))
+                saved_list.append(os.path.join(self.save_dir, name+'__1.npy'))
+                saved_list.append(os.path.join(self.save_dir, name+'__2.npy'))
+                saved_list.append(os.path.join(self.save_dir, name+'__3.npy'))
+                saved_list.append(os.path.join(self.save_dir, name+'__4.npy'))
                 continue
             f_start, f_end = 1, 0
             features = {'0':[],'1':[], '2':[], '3':[], '4':[]}
@@ -72,7 +77,6 @@ class ImageFeatureExtractor:
                 f_end = f_end + 3040
                 inputs = load_rgb_frames(root, name, f_start, f_end)
                 remain_nf -= 3040
-                f_start = f_start + 3040
                 for phase in ['0', '1', '2', '3', '4']:
                     # get the inputs
                     crop_inputs = transformers[phase](inputs)
@@ -84,9 +88,10 @@ class ImageFeatureExtractor:
                         if ip.shape[2] != 16:
                             continue
                         if phase == '0':
-                            elapsed_frames.append([start, end-1]) 
+                            elapsed_frames.append([f_start+start, f_start+end-1]) 
                         features[phase].append(i3d.extract_features(ip).squeeze(0).permute(1,2,3,0).data.cpu().numpy())
-                
+                f_start = f_start + 3040
+
             inputs = load_rgb_frames(root, name, f_start, nf)
             for phase in ['0', '1', '2', '3', '4']:
                 # get the inputs
@@ -99,7 +104,7 @@ class ImageFeatureExtractor:
                     if ip.shape[2] != 16:
                         continue
                     if phase == '0':
-                        elapsed_frames.append([start, end-1]) 
+                        elapsed_frames.append([f_start+start, f_start+end-1]) 
                     features[phase].append(i3d.extract_features(ip).squeeze(0).permute(1,2,3,0).data.cpu().numpy())      
                 print(os.path.join(self.save_dir, name+f"__{phase}"))
                 np.save(os.path.join(self.save_dir, name+f"__{phase}"), np.concatenate(features[phase], axis=0).reshape(-1, 1024))
@@ -108,7 +113,9 @@ class ImageFeatureExtractor:
         return saved_list, elapsed_frames
 
 if __name__ == "__main__":
-    img_dir = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/dataset/horror_film/images/movieclips'
-    save_dir = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/dataset/horror_film/features/movieclips'
-    img_feature_extractor = ImageFeatureExtractor(root=img_dir, save_dir=save_dir) 
+    root = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/dataset/horror_film/images/Bloody'
+    save_dir = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/dataset/horror_film/features/Bloody'
+    list_img_dir = glob.glob(root+'/*')
+    #list_img_dir = list_img_dir[300:]
+    img_feature_extractor = ImageFeatureExtractor(list_img_dir=list_img_dir, save_dir=save_dir, num_ignore_frame=0) 
     rgb_feature_files, elapsed_frames = img_feature_extractor.extract_image_features()

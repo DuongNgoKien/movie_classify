@@ -1,5 +1,8 @@
 import torch
 from tqdm import tqdm
+import wandb
+
+wandb.init(project="horror_detect", name="experiment_001", entity="trungkienty2001")
 
 
 def CENTROPY(logits, logits2, seq_len,):
@@ -21,7 +24,7 @@ def train(dataloader, model, optimizer, args, criterion):
         # for i, (n_inputs, a_inputs, n_labels, a_labels) in tqdm(enumerate(dataloader)):
         #     inputs = torch.cat([n_inputs, a_inputs], dim=0).cuda().float()
         #     labels = torch.cat([n_labels, a_labels], dim=0).cuda().float()
-        for i, (inputs, labels) in tqdm(enumerate(dataloader)):
+        for i, (inputs, labels) in enumerate(tqdm(dataloader)):
             seq_len = torch.sum(torch.max(torch.abs(inputs), dim=2)[0] > 0, 1)
             inputs = inputs[:, :torch.max(seq_len), :]
             inputs = inputs.float().to(args.device)
@@ -47,6 +50,7 @@ def train(dataloader, model, optimizer, args, criterion):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            wandb.log({'loss': loss})
 
             # unit = dataloader.__len__() // 2
             # if i % unit == 0:

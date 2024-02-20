@@ -22,7 +22,7 @@ from inference_detect import sentiment_analysis_inference
 from summary import summary_infer
 from pipeline.audio_feature_extract import AudioFeatureExtractor
 from pipeline.image_feature_extract import ImageFeatureExtractor
-from pipeline import violence_detect, smoke_drunk_detect
+from pipeline import detect_scene, smoke_drunk_detect
 from pytorchi3d.mp4_to_jpg import convert_mp4_to_jpg
 from torchvggish.torchvggish.mp4_to_wav import convert_mp4_to_avi
 
@@ -41,6 +41,8 @@ IMAGE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/image
 IMG_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/features/img_features"
 AUDIO_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/features/audio_features"
 SUB_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/subs"
+VIOLECE_CHECKPOINT= "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/violence.pkl"
+HORROR_CHECKPOINT = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/ckpt/horror.pkl"
 ROOT_API = "http://183.81.35.24:32774"
 COMMAND_UPDATE_STATUS_API = f"{ROOT_API}/content_command/update_status"
 CONTENT_UPDATE_STATUS_API = f"{ROOT_API}/content/update_status"
@@ -356,6 +358,21 @@ def detect_violence(list_img_dir, audio_list_path, fps):
         feature_save_path=AUDIO_FEATURE_PATH
     )
     audio_feature_files = audio_feature_extractor.extract_audio_features()
+    pred = detect_scene.infer(VIOLECE_CHECKPOINT, rgb_feature_files, audio_feature_files)
+    elapsed_seconds = np.array(elapsed_frames)/fps
+    return pred, elapsed_seconds
+
+def detect_horror(list_img_dir, audio_list_path, fps):
+    img_feature_extractor = ImageFeatureExtractor(list_img_dir=list_img_dir) 
+    rgb_feature_files, elapsed_frames = img_feature_extractor.extract_image_features()
+    #Audio Feature Extraction
+    audio_feature_extractor = AudioFeatureExtractor(
+        audio_list_path,
+        feature_save_path=AUDIO_FEATURE_PATH
+    )
+    audio_feature_files = audio_feature_extractor.extract_audio_features()
+    pred = detect_scene.infer(HORROR_CHECKPOINT, rgb_feature_files, audio_feature_files)
+    elapsed_seconds = np.array(elapsed_frames)/fps
     pred = violence_detect.infer(rgb_feature_files, audio_feature_files)
     elapsed_seconds = np.array(elapsed_frames) / fps
     
