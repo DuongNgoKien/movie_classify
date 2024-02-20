@@ -113,7 +113,7 @@ def get_duration(video_start, video_end):
     return dif_hour * 3600 + dif_min * 60 + dif_sec
 
 
-def make_video_level_dataset(list_img_dir, isTrain, num_ignore_frame=0):
+def make_video_level_dataset(list_img_dir, isTrain, num_ignore_frame):
     # split_file = split
     # split='testing'
     dataset = []
@@ -126,11 +126,12 @@ def make_video_level_dataset(list_img_dir, isTrain, num_ignore_frame=0):
             violence_flag = ntpath.basename(file_path)
             violence_flag = violence_flag.split(".")[0]
 
-        print(file_path)
         #fps = cap.get(5)
         num_frames = int(len(os.listdir(file_path))) - num_ignore_frame
-        duration = num_frames / 24
-        print(num_frames)
+        #duration = num_frames / 24
+        if num_frames <= 0: 
+            print(file_name)
+            continue
         # duration = get_duration(video_start, video_end)
 
         label = np.zeros((num_frames-1), np.float32)
@@ -141,13 +142,13 @@ def make_video_level_dataset(list_img_dir, isTrain, num_ignore_frame=0):
             elif violence_flag[0] == "A":  
                 for fr in range(0, num_frames):
                     label[fr] = 0
-        dataset.append((file_name, label, duration, num_frames))
+        dataset.append((file_name, label, file_path, num_frames))
 
     return dataset
 
 
 class Charades(data_utl.Dataset):
-    def __init__(self, list_img_dir, mode, isTrain=False, save_dir="", num_ignore_frame=327):
+    def __init__(self, list_img_dir, mode, isTrain=False, save_dir="", num_ignore_frame=0):
 
         self.data = make_video_level_dataset(list_img_dir, isTrain, num_ignore_frame)
         # self.data = make_dataset(split_file, split, root, mode)
@@ -163,16 +164,18 @@ class Charades(data_utl.Dataset):
         Returns:
             tuple: (image, target) where target is class_index of the target class.
         """
-        vid, label, dur, nf = self.data[index]
+        vid, label, file_path, nf = self.data[index]
         # if os.path.exists(os.path.join(self.save_dir, vid + "__0.npy")):
-        #     return 0, 0, 0
+        #     return 0, 0, vid, 0
+        # else:
+        #     print(file_path)
 
         # if self.mode == "rgb":
         #     imgs = load_rgb_frames(os.path.join(self.root, vid), vid, 1, nf)
         # else:
         #     imgs = load_flow_frames(self.root, vid, 1, nf)
 
-        return self.list_img_dir[index], torch.from_numpy(label), vid, nf
+        return file_path, torch.from_numpy(label), vid, nf
 
     def __len__(self):
         return len(self.data)
