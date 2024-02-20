@@ -5,7 +5,8 @@ import ntpath
 def convert_mp4_to_avi(file_name, output_directory):
     input_name = file_name
     output_name = ntpath.basename(file_name)
-    output = os.path.join(output_directory, output_name.replace('.mp4', '.wav', 1))
+    extension = output_name.split('.')[-1]
+    output = os.path.join(output_directory, output_name.replace(extension, 'wav', 1))
     # cmd = 'ffmpeg -i "{input}" -c:v libx264 -c:a libmp3lame -b:a 384K "{output}"'.format(
     #                                                 input = input_name, 
     #                                                 output = output)

@@ -4,7 +4,7 @@ import torch
 from .preprocess import process_feat
 
 class Dataset(data.Dataset):
-    def __init__(self, args, rgb_list_file, audio_list_file, transform=None, test_mode=False):
+    def __init__(self, args, rgb_list_file, audio_list_file, labels=None, transform=None, test_mode=False):
         self.modality = args.modality
 
         if test_mode:
@@ -14,9 +14,10 @@ class Dataset(data.Dataset):
             self.rgb_list_file = rgb_list_file
             self.audio_list_file = audio_list_file
         else:
-            self.rgb_list_file = args.rgb_list
-            self.flow_list_file = args.flow_list
-            self.audio_list_file = args.audio_list
+            self.rgb_list_file = rgb_list_file
+            #self.flow_list_file = args.flow_list
+            self.audio_list_file = audio_list_file
+            self.labels = labels
         self.max_seqlen = args.max_seqlen
         self.tranform = transform
         self.test_mode = test_mode
@@ -47,10 +48,10 @@ class Dataset(data.Dataset):
             assert 1 > 2, 'Modality is wrong!'
 
     def __getitem__(self, index):
-        if self.normal_flag in self.list[index]:
-            label = 0.0
+        if self.test_mode:
+            label = 0
         else:
-            label = 1.0
+            label = self.labels[index]
 
         if self.modality == 'AUDIO':
             features = np.array(np.load(self.list[index]), dtype=np.float32)
