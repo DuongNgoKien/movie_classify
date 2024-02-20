@@ -277,7 +277,7 @@ def speech_and_classify_text(
             sub_file_path=sub_file_path
         )
     
-    # Do text analysis with speech2text_result           
+    # Do text analysis with speech2text_result          
     text_analysis_results = sentiment_analysis_inference(
         category_id,
         threshold,
