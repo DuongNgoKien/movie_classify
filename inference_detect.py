@@ -10,8 +10,6 @@ from transformers import (
     AutoTokenizer
 )
 
-# category_id = random.randint(1, 12)
-
 def extract_subtitle_info(text: str) -> list:
     """
     Extract the time and text from the subtitle text.

@@ -7,3 +7,4 @@ transformers
 requests
 flask
 pysrt
+google-api-python-client
