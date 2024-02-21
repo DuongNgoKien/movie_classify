@@ -11,7 +11,13 @@ from transformers import pipeline,AutoTokenizer,AutoModelForSeq2SeqLM
 from waitress import serve
 from flask import Flask, request, Response
 
-from utils import audio_extract, whisper_infer, translation, timestamp_format
+from utils import (
+    audio_extract, 
+    whisper_infer,
+    translation,
+    timestamp_format,
+    write_sub_file
+)
 from inference_detect import sentiment_analysis_inference
 from summary import summary_infer
 from pipeline.audio_feature_extract import AudioFeatureExtractor
@@ -53,8 +59,8 @@ def analysis_process():
         # get content information
         content_id = content["content_id"]
         category_id = content["category_id"]
-        video_id = content["id"]
-        
+        command_id = content["id"]
+        threshold = content["threshold"]
         content_info = requests.get(
             f"{ROOT_API}/content/get_by_id/{content_id}"
         ).json()
@@ -63,10 +69,13 @@ def analysis_process():
         # check path and download if not exists.
         video_path = content_info["path"]
 
+        #
         if not os.path.exists(video_path):
             try:
                 video_url = content_info["url"]
                 title = content_info["title"].replace(" ", "_")
+                sub_file_path = os.path.join(SUB_PATH, f"{title}.srt")
+
                 video_path = f"{VIDEO_PATH}/{title}.mp4"
                 if not os.path.exists(video_path):
                     os.system(
@@ -75,7 +84,7 @@ def analysis_process():
             except:
                 update_status(
                     type="command_status",
-                    video_id=video_id,
+                    command_id=command_id,
                     status="Dowload error"
                 )
         
@@ -157,13 +166,10 @@ def analysis_process():
             audio_list_path = [audio_path]
             
             pred, elapsed_seconds = detect_violence(list_img_dir, audio_list_path, fps)
-            post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='1', content='Bao luc')
+            post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='2', content='Bao luc')
             
             pred, elapsed_seconds = detect_pornography(video_path)
             post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='4', content='Khieu dam')
-            
-            pred, elapsed_seconds = smoke_drink_detect.infer(video_path)
-            post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='3', content='Chat kich thich gay nghien', threshold=0.7)
             
             update_status(
                 type="command_status", video_id=video_id, status="Done"
@@ -173,13 +179,12 @@ def analysis_process():
             )
 
 
-def update_status(type, video_id, status):
+def update_status(type, command_id, status):
     api = (
         COMMAND_UPDATE_STATUS_API if type == "command_status"
         else CONTENT_UPDATE_STATUS_API
     )
-    api = f"{api}?id={video_id}&status={status}"
-    print(api)
+    api = f"{api}?id={command_id}&status={status}"
     requests.put(api)
 
 
@@ -208,6 +213,9 @@ def detect_horror(list_img_dir, audio_list_path, fps):
     audio_feature_files = audio_feature_extractor.extract_audio_features()
     pred = detect_scene.infer(HORROR_CHECKPOINT, rgb_feature_files, audio_feature_files)
     elapsed_seconds = np.array(elapsed_frames)/fps
+    pred = violence_detect.infer(rgb_feature_files, audio_feature_files)
+    elapsed_seconds = np.array(elapsed_frames) / fps
+    
     return pred, elapsed_seconds
 
  
@@ -221,6 +229,7 @@ def detect_pornography(video_path):
 
 def post_predictions(
     pred,
+    command_id,
     elapsed_seconds,
     api,
     content_id,
@@ -251,6 +260,7 @@ def post_predictions(
                 avg_prob = sum_prob/count
                 if avg_prob >= threshold:
                     json_data = {
+                        "command_id": command_id,
                         "category_id": category_id, 
                         'content_id': content_id, 
                         'timespan': start + " --> " + end,
@@ -268,6 +278,7 @@ def post_predictions(
         avg_prob = sum_prob/count
         if avg_prob >= threshold:
             json_data = {
+                'command_id': command_id,
                 'category_id': category_id,
                 'content_id': content_id, 
                 'timespan': start + " --> " + end,
@@ -275,19 +286,19 @@ def post_predictions(
                 'detect_from': 'image',
                 'threshold': avg_prob
             }
-            print(json_data)
             requests.post(api, json = json_data)
 
 
-def update_progress_status(video_id, process_percent, note):
+def update_progress_status(command_id, process_percent, note):
     requests.put(
         f"{ROOT_API}/content_command/update_progress",
         params={
-            "id": video_id,
+            "id": command_id,
             "new_note": note,
             "progress": process_percent
         }
     )    
             
 if __name__ == "__main__":
-    analysis_process()
+    while True:
+        analysis_process()
