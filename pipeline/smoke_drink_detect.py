@@ -44,19 +44,14 @@ def infer(video_path):
   pixel_values = encoding.pixel_values.to(device)
 
   # forward pass
-  logits = []
+  probabilities = []
   with torch.no_grad():
     for i in range(pixel_values.size()[0]):
       outputs = model(pixel_values[i].unsqueeze(0))
-      logits.append(torch.nn.functional.softmax(outputs.logits, dim=1))
+      logits = torch.nn.functional.softmax(outputs.logits, dim=1)
+      smoke_drink_scores = (logits[:,100] + logits[:,101] + logits[:,102] + logits[:,316] + logits[:,317])
+      probabilities.append(smoke_drink_scores.item())
       
-    logits = torch.cat(logits, dim=0)
-  probabilities, predicted_class_idx = torch.max(logits, 1)
-
-  predicted_class = []
-  for i in range(predicted_class_idx.size()[0]):
-    predicted_class.append(model.config.id2label[predicted_class_idx[i].item()])
-    
   del model
   
   elapsed_seconds = []
@@ -65,4 +60,4 @@ def infer(video_path):
     end = index[i][-1] / fps
     elapsed_seconds.append([start, end])
 
-  return probabilities, predicted_class, np.array(elapsed_seconds)
+  return np.array(probabilities), np.array(elapsed_seconds)

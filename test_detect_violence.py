@@ -4,14 +4,14 @@ from pipeline.detect_scene import infer
 from pytorchi3d.mp4_to_jpg import convert_mp4_to_jpg
 from torchvggish.torchvggish.mp4_to_wav import convert_mp4_to_avi
 import numpy as np
-#import opennsfw2 as n2
+import opennsfw2 as n2
 
 AUDIO_PATH = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/audios"
 IMAGE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/images"
 IMG_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/features/img_features"
 AUDIO_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/features/audio_features"
-VIOLECE_CHECKPOINT= "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/pretrained.pkl"
-HORROR_CHECKPOINT = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/ckpt/pxg.pkl"
+VIOLENCE_CHECKPOINT= "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/violence.pkl"
+HORROR_CHECKPOINT = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/horror.pkl"
 
 def detect_violence(list_img_dir, audio_list_path, fps):
     #Image Feature Extraction
@@ -21,7 +21,7 @@ def detect_violence(list_img_dir, audio_list_path, fps):
     audio_feature_extractor = AudioFeatureExtractor(audio_list_path, feature_save_path=AUDIO_FEATURE_PATH)
     audio_feature_files = audio_feature_extractor.extract_audio_features()
     
-    pred = infer(VIOLENCE_CHECKPOINT, rgb_feature_files, audio_feature_files)
+    pred = infer(HORROR_CHECKPOINT, rgb_feature_files, audio_feature_files)
     elapsed_seconds = np.array(elapsed_frames)/fps
     return pred, elapsed_seconds
 
@@ -73,7 +73,7 @@ def post_predictions(pred, elapsed_seconds, threshold=0.7):
             print(str(start) + " -> " + str(end))
 
 if __name__ == "__main__":
-    video_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/videos/Hollow Man： Sebastian attacks Linda (HD CLIP) [hliv093LKVw].mp4'
+    video_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/videos/testt.mp4'
     fps, img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
     list_img_dir = [img_dir]
     audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
