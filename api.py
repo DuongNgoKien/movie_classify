@@ -16,7 +16,7 @@ from inference_detect import sentiment_analysis_inference
 from summary import summary_infer
 from pipeline.audio_feature_extract import AudioFeatureExtractor
 from pipeline.image_feature_extract import ImageFeatureExtractor
-from pipeline import detect_scene, smoke_drunk_detect
+from pipeline import detect_scene, smoke_drink_detect
 from pytorchi3d.mp4_to_jpg import convert_mp4_to_jpg
 from torchvggish.torchvggish.mp4_to_wav import convert_mp4_to_avi
 
@@ -157,10 +157,13 @@ def analysis_process():
             audio_list_path = [audio_path]
             
             pred, elapsed_seconds = detect_violence(list_img_dir, audio_list_path, fps)
-            post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='2', content='Bao luc')
+            post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='1', content='Bao luc')
             
             pred, elapsed_seconds = detect_pornography(video_path)
             post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='4', content='Khieu dam')
+            
+            pred, elapsed_seconds = smoke_drink_detect.infer(video_path)
+            post_predictions(pred, elapsed_seconds, category_api, video_id, content_id, category_id='3', content='Chat kich thich gay nghien', threshold=0.7)
             
             update_status(
                 type="command_status", video_id=video_id, status="Done"
