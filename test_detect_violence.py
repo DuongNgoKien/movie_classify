@@ -33,7 +33,7 @@ def detect_horror(list_img_dir, audio_list_path, fps):
     audio_feature_extractor = AudioFeatureExtractor(audio_list_path, feature_save_path=AUDIO_FEATURE_PATH)
     audio_feature_files = audio_feature_extractor.extract_audio_features()
     
-    pred = infer(HORROR_CHECKPOINT, rgb_feature_files, audio_feature_files)
+    pred = infer(VIOLENCE_CHECKPOINT, rgb_feature_files, audio_feature_files)
     elapsed_seconds = np.array(elapsed_frames)/fps
     return pred, elapsed_seconds
     
@@ -73,7 +73,7 @@ def post_predictions(pred, elapsed_seconds, threshold=0.7):
             print(str(start) + " -> " + str(end))
 
 if __name__ == "__main__":
-    video_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/videos/testt.mp4'
+    video_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/videos/20240226_144614_john-rambo--doan-phim-hay-nhat.mp4'
     fps, img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
     list_img_dir = [img_dir]
     audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
