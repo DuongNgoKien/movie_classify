@@ -1,4 +1,4 @@
-from movie_classify.pipeline import smoke_drink_detect
+from pipeline import smoke_drink_detect
 
 def post_predictions(pred, elapsed_seconds, threshold=0.7):
     sum_prob, count, start, end = 0, 0, 0, 0
@@ -29,5 +29,5 @@ def post_predictions(pred, elapsed_seconds, threshold=0.7):
         if avg_prob >= threshold:
             print(str(start) + " -> " + str(end))
             
-pred, elapsed_time = smoke_drink_detect.infer(video_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/AQUAMAN Saves Fisherman - Bar Scene - Justice League (2017) Movie Clip HD [duirBiDoq3Y].mp4')
+pred, elapsed_time = smoke_drink_detect.infer(video_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/Definitely, Maybe (3⧸9) Movie CLIP - Smoke-Off (2008) HD [804UN9XPV44].mp4')
 post_predictions(pred, elapsed_time, threshold=0.4)
