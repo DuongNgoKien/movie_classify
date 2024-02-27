@@ -1,8 +1,8 @@
 import numpy as np
+import torch
 import glob
 import ntpath
-
-import os, sys, glob
+import os, sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from torchvggish.torchvggish import vggish
 
@@ -26,6 +26,7 @@ class AudioFeatureExtractor():
         
         for audio_path in self.audio_list_path:
             audio_name = ntpath.basename(audio_path)
+            file_name_without_extension = os.path.splitext(audio_path)[0]
             print(audio_name)
             path_save = (os.path.join(self.feature_save_path, audio_name[:-4])+".npy")
             if os.path.exists(path_save):
@@ -34,9 +35,18 @@ class AudioFeatureExtractor():
         
             # if os.path.exists(os.path.join(self.feature_save_path, audio_name[:-4])+".npy"):
             #     return os.path.join(self.feature_save_path, audio_name[:-4])+".npy"
-
-            embeddings = embedding_model.forward(audio_path)
-            np.save(os.path.join(self.feature_save_path, audio_name[:-4]),embeddings.detach().cpu().numpy())
+            cmd = 'ffmpeg -i {} -f segment -segment_time 1500 -c copy {}_%01d.wav'.format(audio_path, file_name_without_extension)
+            os.system(cmd)
+            
+            list_sub_files = sorted(glob.glob(file_name_without_extension+'_*.wav'))
+            embeddings = []
+            for sub_file in list_sub_files:
+                print(sub_file)
+                embeddings.append(embedding_model.forward(sub_file).data.cpu().numpy())
+            
+            embeddings = np.concatenate(embeddings, axis=0)
+            print(embeddings.shape)
+            np.save(os.path.join(self.feature_save_path, audio_name[:-4]),embeddings)
             
             audio_list_file_feature.append(path_save)
         
