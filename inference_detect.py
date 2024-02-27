@@ -10,8 +10,6 @@ from transformers import (
     AutoTokenizer
 )
 
-# category_id = random.randint(1, 12)
-
 def extract_subtitle_info(text: str) -> list:
     """
     Extract the time and text from the subtitle text.
@@ -42,67 +40,69 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
     """
     
     # get sub
-    
-    subs = pysrt.open(sub_file_path)
-    # subtitle_info = extract_subtitle_info(sub_script)
-    start_time_seconds = subs[0].start.hours * 3600 + subs[0].start.minutes * 60 + subs[0].start.seconds
-    hours = subs[-1].end.hours
-    minutes = subs[-1].end.minutes
-    seconds = subs[-1].end.seconds
-    total_duration_seconds = hours * 3600 + minutes * 60 + seconds
+    if category_id == 3:
+        pass
+    else:
+        subs = pysrt.open(sub_file_path)
+        # subtitle_info = extract_subtitle_info(sub_script)
+        start_time_seconds = subs[0].start.hours * 3600 + subs[0].start.minutes * 60 + subs[0].start.seconds
+        hours = subs[-1].end.hours
+        minutes = subs[-1].end.minutes
+        seconds = subs[-1].end.seconds
+        total_duration_seconds = hours * 3600 + minutes * 60 + seconds
 
-    slices_srt = []
-    # Slice the text in 30-second intervals and print the start and end times
-    while start_time_seconds < total_duration_seconds:
-        end_time_seconds = start_time_seconds + 90
-        # print(f"Start time: {start_time_seconds} seconds, End time: {end_time_seconds} seconds")
-        part = subs.slice(starts_after={'seconds': start_time_seconds}, ends_before={'seconds': end_time_seconds})
-        # print(part.text)
-        start_time_seconds = end_time_seconds
-        slices_srt.append(part)
+        slices_srt = []
+        # Slice the text in 30-second intervals and print the start and end times
+        while start_time_seconds < total_duration_seconds:
+            end_time_seconds = start_time_seconds + 90
+            # print(f"Start time: {start_time_seconds} seconds, End time: {end_time_seconds} seconds")
+            part = subs.slice(starts_after={'seconds': start_time_seconds}, ends_before={'seconds': end_time_seconds})
+            # print(part.text)
+            start_time_seconds = end_time_seconds
+            slices_srt.append(part)
 
-    slices_srt = [s for s in slices_srt if s]
-    # initial tokenizer and model
-    path_to_model = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-{}-pytorch".format(category_id)
-    tokenizer = AutoTokenizer.from_pretrained(path_to_model)
-    model = BertForSequenceClassification.from_pretrained(path_to_model).to("cuda")
+        slices_srt = [s for s in slices_srt if s]
+        # initial tokenizer and model
+        path_to_model = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-{}-pytorch".format(category_id)
+        tokenizer = AutoTokenizer.from_pretrained(path_to_model)
+        model = BertForSequenceClassification.from_pretrained(path_to_model).to("cuda")
 
-    # get sentiment-analysis results
-    results = []
-    for sub in slices_srt:
-        inputs = tokenizer(
-            sub.text,
-            padding=True,
-            truncation=True,
-            max_length=512,
-            return_tensors="pt"
-        ).to("cuda")
-        outputs = model(**inputs)
-        probs = outputs[0].softmax(1)
-        pred_label_idx = probs.argmax()
-        pred_label = model.config.id2label[pred_label_idx.item()]
-        probability = int(probs[0][pred_label_idx.item()].item()*100)
-        result = {
-            'pred_label_idx': pred_label_idx.item(),
-            'pred_label': pred_label,
-            'text': sub.text.replace("\n", " "),
-            # 'time': "{} --> {}".format(sub[0], sub[1]),
-            'time': "{}:{:02d}:{:02d},{:02d} --> {}:{:02d}:{:02d},{:02d}".format(
-                sub[0].start.hours, sub[0].start.minutes, sub[0].start.seconds, sub[0].start.milliseconds,
-                sub[-1].end.hours, sub[-1].end.minutes, sub[-1].end.seconds, sub[-1].end.milliseconds),
-            'probability': probability
-        }
-        # if the probability is greater than threshold and the label is True, add the result to the list
-        if (
-            float(probability) >= threshold 
-            and pred_label_idx.item() == 1
-        ):
-            results.append(result)
-    # delete the model and tokenizer to free GPU
-    del model
-    del tokenizer
+        # get sentiment-analysis results
+        results = []
+        for sub in slices_srt:
+            inputs = tokenizer(
+                sub.text,
+                padding=True,
+                truncation=True,
+                max_length=512,
+                return_tensors="pt"
+            ).to("cuda")
+            outputs = model(**inputs)
+            probs = outputs[0].softmax(1)
+            pred_label_idx = probs.argmax()
+            pred_label = model.config.id2label[pred_label_idx.item()]
+            probability = int(probs[0][pred_label_idx.item()].item()*100)
+            result = {
+                'pred_label_idx': pred_label_idx.item(),
+                'pred_label': pred_label,
+                'text': sub.text.replace("\n", " "),
+                # 'time': "{} --> {}".format(sub[0], sub[1]),
+                'time': "{}:{:02d}:{:02d},{:02d} --> {}:{:02d}:{:02d},{:02d}".format(
+                    sub[0].start.hours, sub[0].start.minutes, sub[0].start.seconds, sub[0].start.milliseconds,
+                    sub[-1].end.hours, sub[-1].end.minutes, sub[-1].end.seconds, sub[-1].end.milliseconds),
+                'probability': probability
+            }
+            # if the probability is greater than threshold and the label is True, add the result to the list
+            if (
+                float(probability) >= threshold 
+                and pred_label_idx.item() == 1
+            ):
+                results.append(result)
+        # delete the model and tokenizer to free GPU
+        del model
+        del tokenizer
 
-    return results
+        return results
 
 
 if __name__ == '__main__':
