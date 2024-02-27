@@ -22,7 +22,7 @@ from inference_detect import sentiment_analysis_inference
 from summary import summary_infer
 from pipeline.audio_feature_extract import AudioFeatureExtractor
 from pipeline.image_feature_extract import ImageFeatureExtractor
-from pipeline import detect_scene, smoke_drunk_detect
+from pipeline import detect_scene, smoke_drink_detect
 from pytorchi3d.mp4_to_jpg import convert_mp4_to_jpg
 from torchvggish.torchvggish.mp4_to_wav import convert_mp4_to_avi
 
@@ -90,52 +90,53 @@ def analysis_process():
         
         # check content_type
         content_type = content["command"]
-        try:
-            if content_type == "speech":
-                speech(
-                    command_id=command_id, 
-                    video_path=video_path,
-                    language=language,
-                    content_id=content_id
-                )
-            elif content_type == "classify_text":
-                classify_text(
-                    content_id=content_id,
-                    category_id=category_id,
-                    command_id=command_id,
-                    language=language,
-                    sub_file_path=sub_file_path
-                )
-            elif content_type == "speech_and_classify_text":
-                speech_and_classify_text(
-                    command_id=command_id,
-                    video_path=video_path,
-                    language=language,
-                    content_id=content_id,
-                    category_id=category_id,
-                    threshold=threshold,
-                    sub_file_path=sub_file_path
-                )
-                
-            else:
-                classify_image(
-                    video_path=video_path,
-                    command_id=command_id,
-                    content_id=content_id,
-                    category_id=category_id
-                )
-        except Exception as e:
-            update_progress_status(
+        # try:
+        if content_type == "speech":
+            speech(
+                command_id=command_id, 
+                video_path=video_path,
+                language=language,
+                content_id=content_id,
+                sub_file_path=sub_file_path
+            )
+        elif content_type == "classify_text":
+            classify_text(
+                content_id=content_id,
+                category_id=category_id,
                 command_id=command_id,
-                note=f"{e}",
-                process_percent=100
+                language=language,
+                sub_file_path=sub_file_path
             )
-            update_status(
-                type="command_status", command_id=command_id, status="Error"
+        elif content_type == "speech_and_classify_text":
+            speech_and_classify_text(
+                command_id=command_id,
+                video_path=video_path,
+                language=language,
+                content_id=content_id,
+                category_id=category_id,
+                threshold=threshold,
+                sub_file_path=sub_file_path
             )
-            update_status(
-                type="content_status", command_id=content_id, status="Error"
+            
+        else:
+            classify_image(
+                video_path=video_path,
+                command_id=command_id,
+                content_id=content_id,
+                category_id=category_id
             )
+        # except Exception as e:
+        #     update_progress_status(
+        #         command_id=command_id,
+        #         note=f"{e}",
+        #         process_percent=100
+        #     )
+        #     update_status(
+        #         type="command_status", command_id=command_id, status="Error"
+        #     )
+        #     update_status(
+        #         type="content_status", command_id=content_id, status="Error"
+        #     )
             
         
 def classify_text(content_id, category_id, command_id, language, sub_file_path):
@@ -180,12 +181,12 @@ def classify_text(content_id, category_id, command_id, language, sub_file_path):
         update_status(
             type="content_status", command_id=content_id, status="Done"
         )
-    
+
     except Exception as e:
         update_progress_status(
             command_id=command_id,
             process_percent=100,
-            note=f"{e}"
+            note=f"Transcript not found. Please speech this content first or use speech and classify text."
         )
         update_status(
             type="command_status", command_id=command_id, status="Error"
@@ -200,44 +201,58 @@ def speech(
     video_path,
     language,
     content_id,
+    sub_file_path
 ):
-    update_status(
-        type="command_status", command_id=command_id, status="Processing"
-    )
-    
-    # convert mp4 to audio and update progress status
-    audio_path = audio_extract(video_path)
-    update_progress_status(
-        command_id=command_id,
-        note="Convert video to audio done. Convert audio to text now.",
-        process_percent=10
-    )
-    
-    # speech to text
-    speech2text_result = whisper_infer(audio_path, language)
-    
-    # update progress status
-    update_progress_status(
-        command_id=command_id,
-        note="Convert video to audio done.",
-        process_percent=100
-    )
-    
-    # post to api
-    speech2text_update_api = f"{ROOT_API}/content_script/create"
-    requests.post(
-        speech2text_update_api,
-        json = {
-            "content_id": content_id,
-            "script": speech2text_result,
-            "language": language,
-            "user_id": 1
-        }
-    )
-    
-    # update command and content status
-    update_status(type="command_status", command_id=command_id, status="done")
-    update_status(type="content_status", command_id=command_id, status="done")
+    try:
+        content_script = requests.get(
+            f"{ROOT_API}/Content_Script/Get_By_Content_Id/{content_id}"
+        ).json()["script"]
+        update_status(
+            type="command_status", command_id=command_id, status="Done"
+        )
+        update_progress_status(
+            command_id=command_id,
+            process_percent=100,
+            note="This content has been speech to text!"
+        )
+    except:
+        update_status(
+            type="command_status", command_id=command_id, status="Processing"
+        )
+        
+        # convert mp4 to audio and update progress status
+        audio_path = audio_extract(video_path)
+        update_progress_status(
+            command_id=command_id,
+            note="Convert video to audio done. Convert audio to text now.",
+            process_percent=10
+        )
+        
+        # speech to text
+        speech2text_result = whisper_infer(audio_path, language, sub_file_path)
+        
+        # update progress status
+        update_progress_status(
+            command_id=command_id,
+            note="Convert video to audio done.",
+            process_percent=100
+        )
+        
+        # post to api
+        speech2text_update_api = f"{ROOT_API}/content_script/create"
+        requests.post(
+            speech2text_update_api,
+            json = {
+                "content_id": content_id,
+                "script": speech2text_result,
+                "language": language,
+                "user_id": 1
+            }
+        )
+        
+        # update command and content status
+        update_status(type="command_status", command_id=command_id, status="done")
+        update_status(type="content_status", command_id=command_id, status="done")
 
 
 def speech_and_classify_text(
@@ -248,32 +263,42 @@ def speech_and_classify_text(
     category_id,
     sub_file_path,
     threshold
-):
+):  
     update_status(
         type="command_status", command_id=command_id, status="Processing"
     )
     
-    # Convert mp4 to audio and update progress status
-    audio_path = audio_extract(video_path)
-    update_progress_status(
-        command_id=command_id,
-        note="Convert video to audio done. Convert audio to text now.",
-        process_percent=10
-    )
-    
-    # speech to text
-    speech2text_result, sub_file_path = whisper_infer(
-        audio_path,
-        language,
-        sub_file_path
-    )
-    
-    # update progress status
-    update_progress_status(
-        command_id=command_id,
-        note="Speech to text done.",
-        process_percent=70
-    )
+    try:
+        speech2text_result = requests.get(
+            f"{ROOT_API}/Content_Script/Get_By_Content_Id/{content_id}"
+        ).json()["script"]
+        if not os.path.exists(sub_file_path):
+            write_sub_file(sub_file_path, speech2text_result)
+        update_progress_status(
+            command_id=command_id,
+            note="Get transcript done. Analysis text now.",
+            process_percent=30
+        )
+    except:
+        # Convert mp4 to audio and update progress status
+        audio_path = audio_extract(video_path)
+        update_progress_status(
+            command_id=command_id,
+            note="Convert video to audio done. Convert audio to text now.",
+            process_percent=10
+        )
+        # speech to text
+        speech2text_result = whisper_infer(
+            audio_path,
+            language,
+            sub_file_path
+        )
+        # update progress status
+        update_progress_status(
+            command_id=command_id,
+            note="Speech to text done.",
+            process_percent=70
+        )
     
     # post speech to text result to api
     speech2text_update_api = f"{ROOT_API}/content_script/create"
@@ -313,7 +338,6 @@ def speech_and_classify_text(
     
     # post analysis results to api
     analysis_update_api = f"{ROOT_API}/content_category/create"
-    
     for text_analysis_result in text_analysis_results:
         text_analysis_data = {
             "command_id": command_id,
@@ -345,6 +369,7 @@ def classify_image(video_path, command_id, content_id, category_id):
     
     if category_id == 1:
         fps, list_img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
+        list_img_dir = [list_img_dir]
         audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
         audio_path = [audio_path]
         pred, elapsed_seconds = detect_violence(list_img_dir, audio_path, fps)
@@ -356,6 +381,7 @@ def classify_image(video_path, command_id, content_id, category_id):
     
     elif category_id == 5:
         fps, list_img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
+        list_img_dir = [list_img_dir]
         audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
         audio_path = [audio_path]
         pred, elapsed_seconds = detect_horror(list_img_dir, audio_path, fps)
@@ -491,4 +517,5 @@ def update_progress_status(command_id, process_percent, note):
 
            
 if __name__ == "__main__":
-    analysis_process()
+    while True:
+        analysis_process()

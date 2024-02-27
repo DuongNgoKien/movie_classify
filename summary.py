@@ -4,6 +4,8 @@ import pysrt
 import requests
 from transformers import (AutoTokenizer, AutoModelForSeq2SeqLM)
 import re
+
+
 nltk.download('punkt')
 ROOT_API = "http://183.81.35.24:32774"
 CONTENT_COMMAND_UPDATE_STATUS_API = f"{ROOT_API}/Content_Command/Update_Status"
@@ -11,7 +13,7 @@ CONTENT_CATEGORY_UPDATE_API = f"{ROOT_API}/Content_Category/Create"
 
 
 def translate_en2vi(en_texts: str,model,tokenizer) -> str:
-        input_ids = tokenizer(en_texts, padding=True, return_tensors="pt")
+        input_ids = tokenizer(en_texts, padding=True, return_tensors="pt").to("cuda")
         output_ids = model.generate(
             **input_ids,
             decoder_start_token_id=tokenizer.lang_code_to_id["vi_VN"],
@@ -21,6 +23,8 @@ def translate_en2vi(en_texts: str,model,tokenizer) -> str:
         )
         vi_texts = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
         return vi_texts
+    
+    
 def summary_infer(script):
     """Summary inferences.
 
@@ -38,7 +42,7 @@ def summary_infer(script):
     texts = re.sub(r'\d+:\d+:\d+,\d+ --> \d+:\d+:\d+,\d+\n', '', first_text)
 #   texts = script.strip("\n")
 
-    path_sum = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-bart-large-cnn"
+    path_sum = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-led-base-book"
     tokenizer = AutoTokenizer.from_pretrained(path_sum)
     sentences = nltk.tokenize.sent_tokenize(texts)
 
@@ -73,15 +77,15 @@ def summary_infer(script):
 
     for input in inputs:
         # generate text summary
-        outputs = model.generate(**input, max_length=512)
+        outputs = model.generate(**input, max_length=1024)
         text_summary = tokenizer.decode(*outputs, skip_special_tokens=True)
         outputs_list.append(text_summary)
 
     del tokenizer, model
     
-    path_trans = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/models--vinai--vinai-translate-en2vi-v2"
-    tokenizer_1 = AutoTokenizer.from_pretrained(path_trans)
-    model_1 = AutoModelForSeq2SeqLM.from_pretrained(path_trans).to("cuda")
+    # path_trans = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/models--vinai--vinai-translate-en2vi-v2"
+    tokenizer_1 = AutoTokenizer.from_pretrained("vinai/vinai-translate-en2vi-v2", cache_dir="/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL")
+    model_1 = AutoModelForSeq2SeqLM.from_pretrained("vinai/vinai-translate-en2vi-v2", cache_dir="/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL").to("cuda")
 
     trans_list = []
     for trans in outputs_list:
@@ -91,6 +95,10 @@ def summary_infer(script):
     
     del tokenizer_1, model_1
     return joined_text
+    
+    print(outputs_list)
+    
+    return outputs_list
 
 def update_status(id, content_id, status):
     api = (
@@ -104,8 +112,9 @@ def main():
     content_list = requests.get(f"{ROOT_API}/Content_Command/Get_Wait")
     content_list = content_list.json()
     content_list = [
-        content for content in content_list if content["status"] == "wait"
+        content for content in content_list if content["command"] == "summarize"
     ]
+
     for content in content_list:
         id = content["id"]
         content_id = content["content_id"]
@@ -116,6 +125,7 @@ def main():
 
         update_status(
             id=id,
+            content_id=content_id,
             status="processing"
         )
 
@@ -134,6 +144,7 @@ def main():
         )
         update_status(
             id=id,
+            content_id=content_id,
             status="done"
         )
 

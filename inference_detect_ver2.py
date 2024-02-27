@@ -19,6 +19,7 @@ ATTRIBUTE_1 = "THREAT"
 ATTRIBUTE_4 = "SEXUALLY_EXPLICIT"
 ATTRIBUTE_12 = "TOXICITY"
 
+
 def extract_subtitle_info(text: str) -> list:
     """
     Extract the time and text from the subtitle text.
@@ -31,6 +32,7 @@ def extract_subtitle_info(text: str) -> list:
     """
     subtitle_info = re.findall(r'(\d+:\d+:\d+,\d+) --> (\d+:\d+:\d+,\d+)\n(.+)', text)
     return subtitle_info
+
 
 def make_prediction_with_api(text, attribute):
     client = discovery.build(
@@ -52,6 +54,7 @@ def make_prediction_with_api(text, attribute):
     probability = data["attributeScores"][attribute]["summaryScore"]["value"]
     return probability
 
+
 def annalysis_api(slices,attribute,threshold):
     results = []
     for sub in tqdm(slices, colour="cyan", desc="Predicting"):
@@ -70,6 +73,8 @@ def annalysis_api(slices,attribute,threshold):
             results.append(result)
         time.sleep(0.5)
     return results
+
+
 def sentiment_analysis_inference(category_id, sub_file_path, threshold):
     """Text sentiment analysis inferences.
 
