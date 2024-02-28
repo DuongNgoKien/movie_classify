@@ -18,7 +18,7 @@ from utils import (
     timestamp_format,
     write_sub_file
 )
-from inference_detect import sentiment_analysis_inference
+from inference_detect_ver2 import sentiment_analysis_inference
 from summary import summary_infer
 from pipeline.audio_feature_extract import AudioFeatureExtractor
 from pipeline.image_feature_extract import ImageFeatureExtractor
@@ -46,6 +46,9 @@ HORROR_CHECKPOINT = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ck
 ROOT_API = "http://183.81.35.24:32774"
 COMMAND_UPDATE_STATUS_API = f"{ROOT_API}/content_command/update_status"
 CONTENT_UPDATE_STATUS_API = f"{ROOT_API}/content/update_status"
+
+
+
 
 
 def analysis_process():
@@ -90,6 +93,8 @@ def analysis_process():
         
         # check content_type
         content_type = content["command"]
+        # selected_function = FUNCTION_MAP.get(content_type, classify_image)
+        # selected_function()
         # try:
         if content_type == "speech":
             speech(
@@ -152,11 +157,12 @@ def classify_text(content_id, category_id, command_id, language, sub_file_path):
             f"{ROOT_API}/content_script/get_by_content_id/{content_id}"
         ).json()
         speech2text_result = content_info["script"]
-        
+        print(speech2text_result)
+
         if language != "en":
             results = translation(speech2text_result, language, sub_file_path)
         else:
-            sub_file_path = write_sub_file(sub_file_path, speech2text_result)
+            write_sub_file(sub_file_path, speech2text_result)
         
         text_analysis_results = sentiment_analysis_inference(
             category_id,
@@ -186,7 +192,8 @@ def classify_text(content_id, category_id, command_id, language, sub_file_path):
         update_progress_status(
             command_id=command_id,
             process_percent=100,
-            note=f"Transcript not found. Please speech this content first or use speech and classify text."
+            # note=f"Transcript not found. Please speech this content first or use speech and classify text."
+            note=f"{e}"
         )
         update_status(
             type="command_status", command_id=command_id, status="Error"
@@ -387,6 +394,9 @@ def classify_image(video_path, command_id, content_id, category_id):
         pred, elapsed_seconds = detect_horror(list_img_dir, audio_path, fps)
         post_predictions(pred, command_id, elapsed_seconds, category_api, content_id, category_id=category_id, content='Kinh di')
         
+    elif category_id == 3:
+        pred, elapsed_time = smoke_drink_detect.infer(video_path=video_path)
+        post_predictions(pred, command_id, elapsed_time, category_api, content_id, category_id, content="Chat gay nghien")  
     update_status(
         type="command_status", command_id=command_id, status="Done"
     )
@@ -515,7 +525,14 @@ def update_progress_status(command_id, process_percent, note):
         }
     )    
 
-           
+
+FUNCTION_MAP = {
+    "speech": speech,
+    "speech_and_classify_text": speech_and_classify_text,
+    "classify_image": classify_image
+}
+
+       
 if __name__ == "__main__":
     while True:
         analysis_process()
