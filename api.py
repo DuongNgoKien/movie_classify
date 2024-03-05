@@ -50,8 +50,6 @@ CONTENT_UPDATE_STATUS_API = f"{ROOT_API}/content/update_status"
 
 
 
-
-
 def analysis_process():
     """Process all content in wait list."""
     # get all content wait list
