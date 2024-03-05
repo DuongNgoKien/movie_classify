@@ -42,11 +42,9 @@ class AudioFeatureExtractor():
             list_sub_files = sorted(glob.glob(file_name_without_extension+"_*.wav"))
             embeddings = []
             for sub_file in list_sub_files:
-                print(sub_file)
                 embeddings.append(embedding_model.forward(sub_file).data.cpu().numpy())
             
             embeddings = np.concatenate(embeddings, axis=0)
-            print(embeddings.shape)
             np.save(os.path.join(self.feature_save_path, audio_name[:-4]),embeddings)
             
             audio_list_file_feature.append(path_save)

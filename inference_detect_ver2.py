@@ -19,7 +19,7 @@ API_KEY = 'AIzaSyAAlEN-tEU7Ewjve5EzaI_JDqyqruzJY1k'
 ATTRIBUTE_1 = "THREAT"
 ATTRIBUTE_4 = "SEXUALLY_EXPLICIT"
 ATTRIBUTE_12 = "TOXICITY"
-
+ATTRIBUTE_6 = "IDENTITY_ATTACK"
 
 def extract_subtitle_info(text: str) -> list:
     """
@@ -31,7 +31,10 @@ def extract_subtitle_info(text: str) -> list:
     Returns:
     list: A list of tuples containing the time and text for each subtitle line
     """
-    subtitle_info = re.findall(r'(\d+:\d+:\d+,\d+) --> (\d+:\d+:\d+,\d+)\n(.+)', text)
+    subtitle_info = re.findall(
+        r'(\d+:\d+:\d+,\d+) --> (\d+:\d+:\d+,\d+)\n(.+)', text
+    )
+    
     return subtitle_info
 
 
@@ -53,27 +56,31 @@ def make_prediction_with_api(text, attribute):
     # print(json.dumps(response, indent=2))
     data = json.loads(json.dumps(response, indent=2))
     probability = data["attributeScores"][attribute]["summaryScore"]["value"]
+    
     return probability
 
 
-def annalysis_api(slices,attribute,threshold):
+def annalysis_api(slices, attribute, threshold):
     results = []
-    for sub in tqdm(slices, colour="cyan", desc="Predicting with API"):
-        pred_label = attribute
-        probability = int(make_prediction_with_api(sub.text, attribute)*100)
-        result = {
-            'pred_label': pred_label,
-            'text': sub.text.replace("\n", " "),
-            'time': "{}:{:02d}:{:02d},{:02d} --> {}:{:02d}:{:02d},{:02d}".format(
-                sub[0].start.hours, sub[0].start.minutes, sub[0].start.seconds, sub[0].start.milliseconds,
-                sub[-1].end.hours, sub[-1].end.minutes, sub[-1].end.seconds, sub[-1].end.milliseconds),
-            # "time": "{} --> {}".format(sub[0], sub[1]),
-            'probability': probability
-        }
-        if float(probability) >= threshold:
-            results.append(result)
-        time.sleep(0.5)
-    pprint(results)
+    try:
+        for sub in tqdm(slices, colour="cyan", desc="Predicting with API"):
+            pred_label = attribute
+            probability = int(make_prediction_with_api(sub.text, attribute)*100)
+            result = {
+                'pred_label': pred_label,
+                'text': sub.text.replace("\n", " "),
+                'time': "{}:{:02d}:{:02d},{:02d} --> {}:{:02d}:{:02d},{:02d}".format(
+                    sub[0].start.hours, sub[0].start.minutes, sub[0].start.seconds, sub[0].start.milliseconds,
+                    sub[-1].end.hours, sub[-1].end.minutes, sub[-1].end.seconds, sub[-1].end.milliseconds),
+                # "time": "{} --> {}".format(sub[0], sub[1]),
+                'probability': probability
+            }
+            if float(probability) >= float(threshold):
+                results.append(result)
+            time.sleep(0.5)
+        pprint(results)
+    except:
+        print("The language is not supported.")
     return results
 
 
@@ -93,8 +100,8 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
     """
     
     # get sub
-    if category_id == 3:
-        pass
+    if category_id == 3 or category_id == 5:
+        return []
     else:
         subs = pysrt.open(sub_file_path)
         # subtitle_info = extract_subtitle_info(sub_script)
@@ -125,7 +132,8 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
         elif category_id == 12:
             results = annalysis_api(slices_srt, ATTRIBUTE_12, threshold)
             # return results
-        
+        elif category_id == 6:
+            results = annalysis_api(slices_srt, ATTRIBUTE_6, threshold)
         # initial tokenizer and model
         # elif category_id not in [1, 4, 12]:
         else:
@@ -137,7 +145,7 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
             results = []
             for sub in tqdm(slices_srt, desc="Predicting", colour="cyan"):
                 inputs = tokenizer(
-                    sub.text,
+                    re.sub("\n", " ", sub.text),
                     padding=True,
                     truncation=True,
                     max_length=512,
@@ -155,11 +163,11 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
                     'time': "{}:{:02d}:{:02d},{:02d} --> {}:{:02d}:{:02d},{:02d}".format(
                         sub[0].start.hours, sub[0].start.minutes, sub[0].start.seconds, sub[0].start.milliseconds,
                         sub[-1].end.hours, sub[-1].end.minutes, sub[-1].end.seconds, sub[-1].end.milliseconds),
-                    'probability': "{}%".format(probability)
+                    'probability': probability
                 }
                 # if the probability is greater than threshold and the label is True, add the result to the list
                 if (
-                    float(probability) >= threshold 
+                    float(probability) >= float(threshold) 
                     and pred_label_idx.item() == 1
                 ):
                     results.append(result)
@@ -167,7 +175,7 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
             del model
             del tokenizer
             
-        pprint(results)
+        # pprint(results)
         return results
 
 

@@ -3,7 +3,7 @@ import cv2
 from skimage.transform import resize
 import torch
 
-def capture(filename,timesep,rgb,h,w,frame_interval):
+def capture(filename, timesep, rgb, h, w, frame_interval):
     cap = cv2.VideoCapture(filename)
 
     if not cap.isOpened():
@@ -21,11 +21,11 @@ def capture(filename,timesep,rgb,h,w,frame_interval):
     
         if not ret:
             break
-        frm = resize(frame,(h, w,rgb))
-        frm = np.expand_dims(frm,axis=0)
+        frm = resize(frame, (h, w, rgb))
+        frm = np.expand_dims(frm, axis=0)
         frm = np.moveaxis(frm, -1, 1)
-        if(np.max(frm)>1):
-            frm = frm/255.0
+        if(np.max(frm) > 1):
+            frm = frm / 255.0
         frames.append(frm)
         timestamp = i / fps
         times.append(timestamp)
@@ -45,7 +45,9 @@ def capture(filename,timesep,rgb,h,w,frame_interval):
             l_intervals.append((start,end))
             start = times[i]
     l_intervals.append((start, times[num_frames-1]))
+    
     return torch_frames, l_intervals
+
 
 def resume_checkpoint(resume_path, model):
     print(f'Loading checkpoint : {resume_path}')

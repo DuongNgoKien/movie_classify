@@ -4,21 +4,27 @@ import torch
 import subprocess
 import whisper
 import logging
+import requests
 
 from moviepy.editor import *
 from datetime import timedelta
 from transformers import (
-    pipelines,
     AutoTokenizer,
-    AutoModelForSeq2SeqLM,
-    BartForConditionalGeneration,
-    BartTokenizer
+    AutoModelForSeq2SeqLM
 )
 
 
-SUB_OUTPUT_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/subs"
-IMAGE_OUTPUT_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/images"
-AUDIO_OUTPUT_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/audios"
+VIDEO_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/videos"
+AUDIO_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/audios"
+IMAGE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/images"
+IMG_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/features/img_features"
+AUDIO_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/features/audio_features"
+SUB_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/subs"
+VIOLECE_CHECKPOINT= "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/violence.pkl"
+HORROR_CHECKPOINT = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/horror.pkl"
+ROOT_API = "http://183.81.35.24:32774"
+COMMAND_UPDATE_STATUS_API = f"{ROOT_API}/content_command/update_status"
+CONTENT_UPDATE_STATUS_API = f"{ROOT_API}/content/update_status"
 
 
 logger = logging.getLogger(__name__)
@@ -35,10 +41,10 @@ def audio_extract(video_file):
     filename, ext = os.path.splitext(video_file)
     filename = filename.split("/")[-1]
 
-    if not os.path.exists(AUDIO_OUTPUT_PATH):
-        os.mkdir(AUDIO_OUTPUT_PATH)
+    if not os.path.exists(AUDIO_PATH):
+        os.mkdir(AUDIO_PATH)
 
-    output_path = os.path.join(AUDIO_OUTPUT_PATH, f"{filename}.wav")
+    output_path = os.path.join(AUDIO_PATH, f"{filename}.wav")
 
     if not os.path.exists(output_path):
         command = f"ffmpeg -i {video_file} -ar 16000 -ac 1 {output_path} -y"
@@ -59,9 +65,9 @@ def frames_extract(video_file, output_ext="jpg", save_every_frames=5):
     assert os.path.exists(video_file), f"Video path {video_file} not exists"
     filename, ext = os.path.splitext(video_file)
     filename = filename.split("/")[-1]
-    if not os.path.exists(IMAGE_OUTPUT_PATH):
-        os.makedirs(IMAGE_OUTPUT_PATH, exist_ok=True)
-    path_save = os.path.join(IMAGE_OUTPUT_PATH, filename)
+    if not os.path.exists(IMAGE_PATH):
+        os.makedirs(IMAGE_PATH, exist_ok=True)
+    path_save = os.path.join(IMAGE_PATH, filename)
     os.makedirs(path_save, exist_ok=True)
     
     # read video
@@ -96,7 +102,7 @@ def whisper_infer(audio_path, language="vi", sub_file_path=""):
     
     transcribe = model.transcribe(
         audio_path,
-        verbose=True,
+        verbose=False,
         language=language,
         fp16=True
     )
@@ -289,6 +295,14 @@ def translation(text, language="vietnamese", sub_file_path=""):
 
 
 def timestamp_format(milliseconds):
+    """Format time from miniseconds to hours:minutes:seconds,milliseconds
+
+    Args:
+        milliseconds (int): time in milliseconds.
+
+    Returns:
+        string: time in format
+    """
     milliseconds = int(milliseconds)
     hours = milliseconds // 3_600_000
     milliseconds -= hours * 3_600_000
@@ -301,8 +315,109 @@ def timestamp_format(milliseconds):
 
 
 def write_sub_file(sub_file_path, text):
+    """Write transcript to sub file.
+
+    Args:
+        sub_file_path (str or PathLike): Path to save transcript file.
+        text (str): transcript.
+    """
     with open(sub_file_path, "w", encoding="utf-8") as sub_f:
         sub_f.write(text)
+
+
+def post_predictions(
+    pred,
+    command_id,
+    elapsed_seconds,
+    api,
+    content_id,
+    category_id,
+    content,
+    threshold
+):
+    """Post content detected from images.
+
+    Args:
+        pred (np.array): model predictions.
+        command_id (int): command id.
+        elapsed_seconds (str): Time of content detected.
+        api (str): api to post data.
+        content_id (int): content id.
+        category_id (int): category id.
+        content (str): content (Kinh di | Khieu dam ...)
+        threshold (int): model predictions.
+    """
+    sum_prob, count, start, end = 0, 0, 0, 0
+    
+    if elapsed_seconds.ndim == 2:
+        start_seconds = elapsed_seconds[:, 0]
+        end_seconds = elapsed_seconds[:, 1]
+    else:
+        start_seconds = elapsed_seconds
+        end_seconds = elapsed_seconds
+        
+    for i in range(pred.shape[0]):
+        if pred[i] >= 0.5:
+            if count == 0:
+                start = start_seconds[i]
+                start = timestamp_format(start * 1000)
+            count += 1
+            sum_prob += pred[i]
+        else:
+            if count !=0:
+                end = end_seconds[i-1]
+                end = timestamp_format(end * 1000)
+                avg_prob = int(sum_prob / count * 100)
+                if avg_prob >= threshold:
+                    json_data = {
+                        "command_id": command_id,
+                        "category_id": category_id, 
+                        'content_id': content_id, 
+                        'timespan': start + " --> " + end,
+                        'content': content, 
+                        'detect_from': 'image',
+                        'threshold': avg_prob
+                    }
+                    requests.post(api, json = json_data)
+                count = 0
+                sum_prob = 0
+                
+    if count != 0:
+        end = end_seconds[i]
+        end = timestamp_format(end * 1000)
+        avg_prob = int(sum_prob / count * 100)
+        if avg_prob >= threshold:
+            json_data = {
+                'command_id': command_id,
+                'category_id': category_id,
+                'content_id': content_id, 
+                'timespan': start + " --> " + end,
+                'content': content, 
+                'detect_from': 'image',
+                'threshold': avg_prob
+            }
+            requests.post(api, json = json_data)
+
+def update_progress_status(command_id, process_percent, note):
+    requests.put(
+        f"{ROOT_API}/content_command/update_progress",
+        params={
+            "id": command_id,
+            "new_note": note,
+            "progress": process_percent
+        }
+    ) 
+    
+
+
+def update_status(type, command_id, status):
+    api = (
+        COMMAND_UPDATE_STATUS_API if type == "command_status"
+        else CONTENT_UPDATE_STATUS_API
+    )
+    api = f"{api}?id={command_id}&status={status}"
+    requests.put(api)
+
 
 if __name__ == "__main__":
     print(timestamp_format(1000000))
