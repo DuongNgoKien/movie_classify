@@ -17,7 +17,7 @@ from torch.utils.data import Dataset, DataLoader
 from torch.autograd import Variable
 import torchvision.models as models
 
-from protest_detection.util import ProtestDatasetEval, modified_resnet50
+from protestDetection.util import ProtestDatasetEval, modified_resnet50
 
 
 def eval_one_dir(img_dir, model, rate):
