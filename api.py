@@ -22,7 +22,7 @@ from inference_detect import sentiment_analysis_inference
 from summary import summary_infer
 from pipeline.audio_feature_extract import AudioFeatureExtractor
 from pipeline.image_feature_extract import ImageFeatureExtractor
-from pipeline import detect_scene, smoke_drunk_detect
+from pipeline import detect_scene, smoke_drunk_detect, politic_detect
 from pytorchi3d.mp4_to_jpg import convert_mp4_to_jpg
 from torchvggish.torchvggish.mp4_to_wav import convert_mp4_to_avi
 
@@ -43,6 +43,7 @@ AUDIO_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classi
 SUB_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/subs"
 VIOLECE_CHECKPOINT= "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/violence.pkl"
 HORROR_CHECKPOINT = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/horror.pkl"
+POLITIC_CHECKPOINT = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/protest-detection-violence-estimation/model_best.pth.tar"
 ROOT_API = "http://183.81.35.24:32774"
 COMMAND_UPDATE_STATUS_API = f"{ROOT_API}/content_command/update_status"
 CONTENT_UPDATE_STATUS_API = f"{ROOT_API}/content/update_status"
@@ -360,7 +361,16 @@ def classify_image(video_path, command_id, content_id, category_id):
         audio_path = [audio_path]
         pred, elapsed_seconds = detect_horror(list_img_dir, audio_path, fps)
         post_predictions(pred, command_id, elapsed_seconds, category_api, content_id, category_id=category_id, content='Kinh di')
-        
+    
+    elif category_id == 3:
+        pred, elapsed_seconds = smoke_drink_detect.infer(video_path)
+        post_predictions(pred, command_id, elapsed_seconds, category_api, content_id, category_id=category_id, content='Chat kich thich gay nghien')     
+    
+    elif category_id == 10:
+        fps, list_img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
+        pred, elapsed_seconds = politic_detect.infer(list_img_dir, POLITIC_CHECKPOINT)
+        post_predictions(pred, command_id, elapsed_seconds, category_api, content_id, category_id=category_id, content='Chinh tri')
+    
     update_status(
         type="command_status", command_id=command_id, status="Done"
     )
