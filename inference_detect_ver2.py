@@ -13,11 +13,13 @@ from googleapiclient import discovery
 import json
 import time
 from tqdm import tqdm
+from pprint import pprint
 
 API_KEY = 'AIzaSyAAlEN-tEU7Ewjve5EzaI_JDqyqruzJY1k'
 ATTRIBUTE_1 = "THREAT"
 ATTRIBUTE_4 = "SEXUALLY_EXPLICIT"
 ATTRIBUTE_12 = "TOXICITY"
+
 
 def extract_subtitle_info(text: str) -> list:
     """
@@ -31,6 +33,7 @@ def extract_subtitle_info(text: str) -> list:
     """
     subtitle_info = re.findall(r'(\d+:\d+:\d+,\d+) --> (\d+:\d+:\d+,\d+)\n(.+)', text)
     return subtitle_info
+
 
 def make_prediction_with_api(text, attribute):
     client = discovery.build(
@@ -52,11 +55,12 @@ def make_prediction_with_api(text, attribute):
     probability = data["attributeScores"][attribute]["summaryScore"]["value"]
     return probability
 
+
 def annalysis_api(slices,attribute,threshold):
     results = []
-    for sub in tqdm(slices, colour="cyan", desc="Predicting"):
+    for sub in tqdm(slices, colour="cyan", desc="Predicting with API"):
         pred_label = attribute
-        probability = make_prediction_with_api(sub.text, attribute)
+        probability = int(make_prediction_with_api(sub.text, attribute)*100)
         result = {
             'pred_label': pred_label,
             'text': sub.text.replace("\n", " "),
@@ -69,7 +73,10 @@ def annalysis_api(slices,attribute,threshold):
         if float(probability) >= threshold:
             results.append(result)
         time.sleep(0.5)
+    pprint(results)
     return results
+
+
 def sentiment_analysis_inference(category_id, sub_file_path, threshold):
     """Text sentiment analysis inferences.
 
@@ -111,17 +118,18 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
 
         if category_id == 1:
             results = annalysis_api(slices_srt, ATTRIBUTE_1, threshold)
-            return results
+            # return results
         elif category_id == 4:
             results = annalysis_api(slices_srt, ATTRIBUTE_4, threshold)
-            return results
+            # return results
         elif category_id == 12:
             results = annalysis_api(slices_srt, ATTRIBUTE_12, threshold)
-            return results
+            # return results
         
         # initial tokenizer and model
-        elif category_id not in [1, 4, 12]:
-            path_to_model = "D:\Work\MODEL\Pytorch-model\\bert-{}-pytorch".format(category_id)
+        # elif category_id not in [1, 4, 12]:
+        else:
+            path_to_model = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-{}-pytorch".format(category_id)
             tokenizer = AutoTokenizer.from_pretrained(path_to_model)
             model = BertForSequenceClassification.from_pretrained(path_to_model).to("cuda")
 
@@ -141,7 +149,6 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
                 pred_label = model.config.id2label[pred_label_idx.item()]
                 probability = int(probs[0][pred_label_idx.item()].item()*100)
                 result = {
-                    'pred_label_idx': pred_label_idx.item(),
                     'pred_label': pred_label,
                     'text': sub.text.replace("\n", " "),
                     # 'time': "{} --> {}".format(sub[0], sub[1]),
@@ -159,8 +166,9 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
             # delete the model and tokenizer to free GPU
             del model
             del tokenizer
-
-            return results
+            
+        pprint(results)
+        return results
 
 
 if __name__ == '__main__':

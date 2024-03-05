@@ -124,6 +124,7 @@ def whisper_infer(audio_path, language="vi", sub_file_path=""):
         result += segment
         
     # write sub_file
+    print(f"Sub file path: {sub_file_path}")
     write_sub_file(sub_file_path, result) 
             
     return result
@@ -300,8 +301,6 @@ def timestamp_format(milliseconds):
 
 
 def write_sub_file(sub_file_path, text):
-    assert os.path.exists(sub_file_path), "Sub file path is not exists."
-    
     with open(sub_file_path, "w", encoding="utf-8") as sub_f:
         sub_f.write(text)
 
