@@ -21,19 +21,20 @@ def detect_violence(list_img_dir, audio_list_path, fps):
     audio_feature_extractor = AudioFeatureExtractor(audio_list_path, feature_save_path=AUDIO_FEATURE_PATH)
     audio_feature_files = audio_feature_extractor.extract_audio_features()
     
-    pred = infer(HORROR_CHECKPOINT, rgb_feature_files, audio_feature_files)
+    pred = infer(VIOLENCE_CHECKPOINT, rgb_feature_files, audio_feature_files)
     elapsed_seconds = np.array(elapsed_frames)/fps
     return pred, elapsed_seconds
 
 def detect_horror(list_img_dir, audio_list_path, fps):
-    #Image Feature Extraction
-    img_feature_extractor = ImageFeatureExtractor(list_img_dir=list_img_dir) 
-    rgb_feature_files, elapsed_frames = img_feature_extractor.extract_image_features()
     #Audio Feature Extraction
     audio_feature_extractor = AudioFeatureExtractor(audio_list_path, feature_save_path=AUDIO_FEATURE_PATH)
     audio_feature_files = audio_feature_extractor.extract_audio_features()
     
-    pred = infer(VIOLENCE_CHECKPOINT, rgb_feature_files, audio_feature_files)
+    #Image Feature Extraction
+    img_feature_extractor = ImageFeatureExtractor(list_img_dir=list_img_dir) 
+    rgb_feature_files, elapsed_frames = img_feature_extractor.extract_image_features()
+    
+    pred = infer(HORROR_CHECKPOINT, rgb_feature_files, audio_feature_files)
     elapsed_seconds = np.array(elapsed_frames)/fps
     return pred, elapsed_seconds
     
@@ -73,7 +74,7 @@ def post_predictions(pred, elapsed_seconds, threshold=0.7):
             print(str(start) + " -> " + str(end))
 
 if __name__ == "__main__":
-    video_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/videos/20240226_144614_john-rambo--doan-phim-hay-nhat.mp4'
+    video_path = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/videos/Never Back Down Movie CLIP  Show Me What You Got (2008) HD.mp4"
     fps, img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
     list_img_dir = [img_dir]
     audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
@@ -82,5 +83,5 @@ if __name__ == "__main__":
     # list_img_dir = ['/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/images/The Final Destination (2009) - The Escalator Kill Scene ｜ Movieclips [8pZDrxPUoyg]']
     # audio_list_path = ['/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/audios/The Final Destination (2009) - The Escalator Kill Scene ｜ Movieclips [8pZDrxPUoyg]..wav']
             
-    pred, elapsed_seconds = detect_violence(list_img_dir, audio_list_path, fps)
+    pred, elapsed_seconds = detect_horror(list_img_dir, audio_list_path, fps)
     post_predictions(pred, elapsed_seconds, threshold=0.7)
