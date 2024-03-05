@@ -35,17 +35,15 @@ class AudioFeatureExtractor():
         
             # if os.path.exists(os.path.join(self.feature_save_path, audio_name[:-4])+".npy"):
             #     return os.path.join(self.feature_save_path, audio_name[:-4])+".npy"
-            cmd = 'ffmpeg -i {} -f segment -segment_time 1500 -c copy {}_%01d.wav'.format(audio_path, file_name_without_extension)
+            cmd = 'ffmpeg -i {} -f segment -segment_time 1000 -c copy {}_%01d.wav'.format(audio_path, file_name_without_extension)
             os.system(cmd)
             
             list_sub_files = sorted(glob.glob(file_name_without_extension+'_*.wav'))
             embeddings = []
             for sub_file in list_sub_files:
-                print(sub_file)
                 embeddings.append(embedding_model.forward(sub_file).data.cpu().numpy())
             
             embeddings = np.concatenate(embeddings, axis=0)
-            print(embeddings.shape)
             np.save(os.path.join(self.feature_save_path, audio_name[:-4]),embeddings)
             
             audio_list_file_feature.append(path_save)

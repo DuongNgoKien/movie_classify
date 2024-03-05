@@ -1,15 +1,6 @@
 import os
-import nltk
+import json
 import requests
-import time
-import torch
-import menovideo.menovideo as menoformer
-import opennsfw2 as n2
-import numpy as np
-
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
-from waitress import serve
-from flask import Flask, request, Response
 
 from utils import (
     audio_extract, 
@@ -23,133 +14,14 @@ from utils import (
 from image_detect import (
     detect_horror,
     detect_pornography,
-    detect_scene,
     detect_violence,
 )
 from inference_detect import sentiment_analysis_inference
-from summary import summary_infer
-from pipeline.audio_feature_extract import AudioFeatureExtractor
-from pipeline.image_feature_extract import ImageFeatureExtractor
-from pipeline import detect_scene, smoke_drink_detect
+from pipeline import smoke_drink_detect
 from pytorchi3d.mp4_to_jpg import convert_mp4_to_jpg
 from torchvggish.torchvggish.mp4_to_wav import convert_mp4_to_avi
+from config import *
 
-app = Flask(__name__)
-
-LANGUAGES = {
-    "vietnamese": "vi",
-    "chinese": "zh",
-    "english": "en"
-}
-
-
-VIDEO_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/videos"
-AUDIO_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/audios"
-IMAGE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/images"
-IMG_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/features/img_features"
-AUDIO_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/features/audio_features"
-SUB_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/subs"
-VIOLECE_CHECKPOINT= "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/violence.pkl"
-HORROR_CHECKPOINT = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/horror.pkl"
-ROOT_API = "http://183.81.35.24:32774"
-COMMAND_UPDATE_STATUS_API = f"{ROOT_API}/content_command/update_status"
-CONTENT_UPDATE_STATUS_API = f"{ROOT_API}/content/update_status"
-
-
-def analysis_process():
-    """Process all content in wait list."""
-    # get all content wait list
-    content_list = requests.get(f"{ROOT_API}/content_command/get_wait")
-    content_list = content_list.json()
-
-    # processing
-    for content in content_list:  
-        # get content information
-        content_id = content["content_id"]
-        category_id = content["category_id"]
-        command_id = content["id"]
-        threshold = content["threshold"]
-        content_info = requests.get(
-            f"{ROOT_API}/content/get_by_id/{content_id}"
-        ).json()
-        language = content_info["language"]
-        
-        # check path and download if not exists.
-        video_path = content_info["path"]
-
-        #
-        if not os.path.exists(video_path):
-            try:
-                video_url = content_info["url"]
-                # title = content_info["title"].replace(" ", "_")
-                sub_file_path = os.path.join(SUB_PATH, f"{content_id}.srt")
-                print(f"Url: {video_url}")
-                video_path = f"{VIDEO_PATH}/{content_id}.mp4"
-                if not os.path.exists(video_path):
-                    os.system(
-                        f"wget -O {video_path} {video_url}"
-                    )
-            except:
-                update_status(
-                    type="command_status",
-                    command_id=command_id,
-                    status="Dowload error"
-                )
-        
-        # check content_type
-        content_type = content["command"]
-        # selected_function = FUNCTION_MAP.get(content_type, classify_image)
-        # selected_function()
-        # try:
-        if content_type == "speech":
-            speech(
-                command_id=command_id, 
-                video_path=video_path,
-                language=language,
-                content_id=content_id,
-                sub_file_path=sub_file_path
-            )
-        elif content_type == "classify_text":
-            classify_text(
-                content_id=content_id,
-                category_id=category_id,
-                command_id=command_id,
-                language=language,
-                threshold=threshold,
-                sub_file_path=sub_file_path
-            )
-        elif content_type == "speech_and_classify_text":
-            speech_and_classify_text(
-                command_id=command_id,
-                video_path=video_path,
-                language=language,
-                content_id=content_id,
-                category_id=category_id,
-                threshold=threshold,
-                sub_file_path=sub_file_path
-            )
-            
-        else:
-            classify_image(
-                video_path=video_path,
-                command_id=command_id,
-                content_id=content_id,
-                category_id=category_id,
-                threshold=threshold
-                )
-        # except Exception as e:
-        #     update_progress_status(
-        #         command_id=command_id,
-        #         note=f"{e}",
-        #         process_percent=100
-        #     )
-        #     update_status(
-        #         type="command_status", command_id=command_id, status="Error"
-        #     )
-        #     update_status(
-        #         type="content_status", command_id=content_id, status="Error"
-        #     )
-            
         
 def classify_text(
     content_id,
@@ -159,6 +31,27 @@ def classify_text(
     sub_file_path,
     threshold
 ):
+    """Process text analysis.
+
+    Args:
+        content_id (int): id of content (generate by back-end developer HoanChu)
+        category_id (int): id of category (
+            1: Bạo lực, nguy hiểm,
+            3: Chất kích thích gây nghiện,
+            4: Khiêu dâm,
+            5: Kinh dị,
+            6: Phân biệt chủng tộc,
+            10: Chính trị,
+            11: Tôn giáo,
+            12: Khiêu khích, xúc phạm
+        )
+        command_id (int): id of cammand (
+            generate by back-end developer HoanChu
+        )
+        language (str): Language of content. [en | vi | zh]. Defaults to "en".
+        sub_file_path (str or PathLike): Path to save sub file.
+        threshold (float): Threshold of sentiment analysis. Defaults to 0.5.
+    """
     # update status
     update_status(
         type="command_status", command_id=command_id, status="Processing"
@@ -227,6 +120,27 @@ def speech(
     content_id,
     sub_file_path
 ):
+    """Process speech to text.
+
+    Args:
+        content_id (int): id of content (generate by back-end developer HoanChu)
+        video_path (str): path of save video.
+        category_id (int): id of category (
+            1: Bạo lực, nguy hiểm,
+            3: Chất kích thích gây nghiện,
+            4: Khiêu dâm,
+            5: Kinh dị,
+            6: Phân biệt chủng tộc,
+            10: Chính trị,
+            11: Tôn giáo,
+            12: Khiêu khích, xúc phạm
+        )
+        command_id (int): id of cammand (
+            generate by back-end developer HoanChu
+        )
+        language (str): Language of content. [en | vi | zh]. Defaults to "en".
+        sub_file_path (str or PathLike): Path to save sub file.
+    """
     try:
         content_script = requests.get(
             f"{ROOT_API}/Content_Script/Get_By_Content_Id/{content_id}"
@@ -287,7 +201,29 @@ def speech_and_classify_text(
     category_id,
     sub_file_path,
     threshold
-):  
+):
+    """Process speech to text and process analysis.
+
+    Args:
+        content_id (int): id of content (generate by back-end developer HoanChu)
+        video_path (str): path of save video.
+        category_id (int): id of category (
+            1: Bạo lực, nguy hiểm,
+            3: Chất kích thích gây nghiện,
+            4: Khiêu dâm,
+            5: Kinh dị,
+            6: Phân biệt chủng tộc,
+            10: Chính trị,
+            11: Tôn giáo,
+            12: Khiêu khích, xúc phạm
+        )
+        command_id (int): id of cammand (
+            generate by back-end developer HoanChu
+        )
+        language (str): Language of content. [en | vi | zh]. Defaults to "en".
+        sub_file_path (str or PathLike): Path to save sub file.
+        threshold (float): Threshold of sentiment analysis. Defaults to 0.5.
+    """
     update_status(
         type="command_status", command_id=command_id, status="Processing"
     )
@@ -389,8 +325,32 @@ def speech_and_classify_text(
     )
 
 
-def classify_image(video_path, command_id, content_id, category_id, threshold):
+def classify_image(
+    video_path,
+    command_id,
+    content_id,
+    category_id,
+    threshold
+):
+    """Process image (video) analysis.
 
+    Args:
+        content_id (int): id of content (generate by back-end developer HoanChu)
+        category_id (int): id of category (
+            1: Bạo lực, nguy hiểm,
+            3: Chất kích thích gây nghiện,
+            4: Khiêu dâm,
+            5: Kinh dị,
+            6: Phân biệt chủng tộc,
+            10: Chính trị,
+            11: Tôn giáo,
+            12: Khiêu khích, xúc phạm
+        )
+        command_id (int): id of cammand (
+            generate by back-end developer HoanChu
+        )
+        threshold (float): Threshold of sentiment analysis. Defaults to 0.5.
+    """
     update_status(
         type="command_status", command_id=command_id, status="Processing"
     )
@@ -408,22 +368,32 @@ def classify_image(video_path, command_id, content_id, category_id, threshold):
                 audio_path,
                 fps
             )
+            post_predictions(
+                pred=pred, 
+                command_id=command_id,
+                elapsed_seconds=elapsed_seconds,
+                api=category_api,
+                content_id=content_id,
+                category_id=category_id,
+                content='Bao luc',
+                threshold=threshold
+            )
         else:
             pred, elapsed_seconds = detect_horror(
                 list_img_dir,
                 audio_path, 
                 fps
             )
-        post_predictions(
-            pred=pred, 
-            command_id=command_id,
-            elapsed_seconds=elapsed_seconds,
-            api=category_api,
-            content_id=content_id,
-            category_id=category_id,
-            content='Bao luc',
-            threshold=threshold
-        )
+            post_predictions(
+                pred=pred, 
+                command_id=command_id,
+                elapsed_seconds=elapsed_seconds,
+                api=category_api,
+                content_id=content_id,
+                category_id=category_id,
+                content='Kinh di',
+                threshold=threshold
+            )
         
     elif category_id == 4:
         pred, elapsed_seconds = detect_pornography(video_path)
@@ -440,7 +410,6 @@ def classify_image(video_path, command_id, content_id, category_id, threshold):
         
     elif category_id == 3:
         pred, elapsed_seconds = smoke_drink_detect.infer(video_path=video_path)
-        print(video_path)
         post_predictions(
             pred=pred, 
             command_id=command_id,
@@ -448,7 +417,7 @@ def classify_image(video_path, command_id, content_id, category_id, threshold):
             api=category_api,
             content_id=content_id,
             category_id=category_id,
-            content='Chat kich thich, gay nghien',
+            content='Chat kich thich',
             threshold=threshold
         )
          
@@ -460,15 +429,110 @@ def classify_image(video_path, command_id, content_id, category_id, threshold):
     )
 
 
-
-
 FUNCTION_MAP = {
     "speech": speech,
     "speech_and_classify_text": speech_and_classify_text,
     "classify_image": classify_image
 }
 
+
+def analysis_process(content):
+    """Process all of the command get from back-end api.
+
+    Args:
+        content (dict): contain all of content information.
+    """
+    # processing all of content
+    content_id = content["content_id"]
+    category_id = content["category_id"]
+    command_id = content["id"]
+    threshold = content["threshold"]
+    content_info = requests.get(
+        f"{ROOT_API}/content/get_by_id/{content_id}"
+    ).json()
+    language = content_info["language"]
+    
+    # check path and download if not exists.
+    video_path = content_info["path"]
+
+    #
+    if not os.path.exists(video_path):
+        try:
+            video_url = content_info["url"]
+            title = content_info["title"].replace(" ", "_")
+            sub_file_path = os.path.join(SUB_PATH, f"{title}.srt")
+            print(f"Url: {video_url}")
+            video_path = f"{VIDEO_PATH}/{title}.mp4"
+            if not os.path.exists(video_path):
+                os.system(
+                    f"wget -O {video_path} {video_url}"
+                )
+        except:
+            update_status(
+                type="command_status",
+                command_id=command_id,
+                status="Dowload error"
+            )
+    
+    # check content_type
+    content_type = content["command"]
+    # selected_function = FUNCTION_MAP.get(content_type, classify_image)
+    # selected_function()
+    # try:
+    if content_type == "speech":
+        speech(
+            command_id=command_id, 
+            video_path=video_path,
+            language=language,
+            content_id=content_id,
+            sub_file_path=sub_file_path
+        )
+    elif content_type == "classify_text":
+        classify_text(
+            content_id=content_id,
+            category_id=category_id,
+            command_id=command_id,
+            language=language,
+            threshold=threshold,
+            sub_file_path=sub_file_path
+        )
+    elif content_type == "speech_and_classify_text":
+        speech_and_classify_text(
+            command_id=command_id,
+            video_path=video_path,
+            language=language,
+            content_id=content_id,
+            category_id=category_id,
+            threshold=threshold,
+            sub_file_path=sub_file_path
+        )
+        
+    else:
+        classify_image(
+            video_path=video_path,
+            command_id=command_id,
+            content_id=content_id,
+            category_id=category_id,
+            threshold=threshold
+            )
+    # except Exception as e:
+    #     update_progress_status(
+    #         command_id=command_id,
+    #         note=f"{e}",
+    #         process_percent=100
+    #     )
+    #     update_status(
+    #         type="command_status", command_id=command_id, status="Error"
+    #     )
+    #     update_status(
+    #         type="content_status", command_id=content_id, status="Error"
+    #     )
+            
+
        
 if __name__ == "__main__":
-    while True:
-        analysis_process()
+    with open("content_info.json", "r", encoding="utf-8") as f:
+        contents = json.load(f)
+        
+    for content in contents:
+        analysis_process(content)

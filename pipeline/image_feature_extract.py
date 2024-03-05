@@ -8,6 +8,8 @@ import os, sys, shutil, glob
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
+from tqdm import tqdm
+
 import pytorchi3d.videotransforms as videotransforms
 from pytorchi3d.pytorch_i3d import InceptionI3d
 from pytorchi3d.charades_dataset_full import Charades as Dataset, video_to_tensor, load_rgb_frames
@@ -32,6 +34,7 @@ class ImageFeatureExtractor:
         self.num_ignore_frame = num_ignore_frame
 
     def extract_image_features(self):
+        print("Image feature extraction...")
         first_transforms = transforms.Compose([videotransforms.FirstCrop(224)])
         second_transforms = transforms.Compose([videotransforms.SecondCrop(224)])
         third_transforms = transforms.Compose([videotransforms.ThirdCrop(224)])
@@ -58,7 +61,6 @@ class ImageFeatureExtractor:
         # Iterate over data.
         saved_list = []
         elapsed_frames = []
-        
         for data in dataloader:
             root, _, name, nf = data
             root, name = root[0], name[0]
@@ -106,7 +108,6 @@ class ImageFeatureExtractor:
                     if phase == '0':
                         elapsed_frames.append([f_start+start, f_start+end-1]) 
                     features[phase].append(i3d.extract_features(ip).squeeze(0).permute(1,2,3,0).data.cpu().numpy())      
-                print(os.path.join(self.save_dir, name+f"__{phase}"))
                 np.save(os.path.join(self.save_dir, name+f"__{phase}"), np.concatenate(features[phase], axis=0).reshape(-1, 1024))
                 saved_list.append(f"{os.path.join(self.save_dir, name+'__'+phase)}.npy")
             #shutil.rmtree(dest=self.root, ignore_errors=True)

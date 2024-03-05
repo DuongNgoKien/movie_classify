@@ -7,9 +7,10 @@ import random
 import re
 from transformers import (
     BertForSequenceClassification,
-    AutoTokenizer
+    AutoTokenizer,
+    AutoModelForSequenceClassification
 )
-
+from tqdm import tqdm
 def extract_subtitle_info(text: str) -> list:
     """
     Extract the time and text from the subtitle text.
@@ -40,8 +41,8 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
     """
     
     # get sub
-    if category_id == 3:
-        pass
+    if category_id == 3 or category_id == 5:
+        return []
     else:
         subs = pysrt.open(sub_file_path)
         # subtitle_info = extract_subtitle_info(sub_script)
@@ -63,15 +64,20 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
 
         slices_srt = [s for s in slices_srt if s]
         # initial tokenizer and model
-        path_to_model = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-{}-pytorch".format(category_id)
-        tokenizer = AutoTokenizer.from_pretrained(path_to_model)
-        model = BertForSequenceClassification.from_pretrained(path_to_model).to("cuda")
+        if category_id == 6 or category_id == 12:
+            path = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-6-12-pytorch"
+            model = AutoModelForSequenceClassification.from_pretrained(path, from_tf=True).to("cuda")
+            tokenizer = AutoTokenizer.from_pretrained(path)
+        else:
+            path_to_model = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/Pytorch-model/bert-{}-pytorch".format(category_id)
+            tokenizer = AutoTokenizer.from_pretrained(path_to_model)
+            model = AutoModelForSequenceClassification.from_pretrained(path_to_model).to("cuda")
 
         # get sentiment-analysis results
         results = []
-        for sub in slices_srt:
+        for sub in tqdm(slices_srt, desc="Predicting", colour="cyan"):
             inputs = tokenizer(
-                sub.text,
+                re.sub("♪♪","",sub.text),
                 padding=True,
                 truncation=True,
                 max_length=512,
@@ -93,10 +99,9 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
                 'probability': probability
             }
             # if the probability is greater than threshold and the label is True, add the result to the list
-            if (
-                float(probability) >= threshold 
-                and pred_label_idx.item() == 1
-            ):
+            if category_id == 6 and float(probability) >= threshold and pred_label_idx.item() == 2:
+                results.append(result) 
+            elif (float(probability) >= threshold and pred_label_idx.item() == 1):
                 results.append(result)
         # delete the model and tokenizer to free GPU
         del model
