@@ -1,4 +1,4 @@
 __pycache__/
-weights/
-whisper_finetune/data/
-whisper_finetune/weights
+weights/*
+whisper_finetune/data/*
+whisper_finetune/weights*
