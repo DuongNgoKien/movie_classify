@@ -29,9 +29,9 @@ def convert_mp4_to_jpg(file_path, save_path):
     cap = cv2.VideoCapture(file_path)
     FPS = cap.get(5)
     count = 1
-    #print(save_path + f"/{video_name}")
-    if createDirectory(save_path + f"/{video_name}"):
-        return 24, save_path + f"/{video_name}"
+    print(save_path + f"/{video_name}")
+    createDirectory(save_path + f"/{video_name}")
+        # return 24, save_path + f"/{video_name}"
     
     # if FPS != 24:
     new_file_path = change_fps(file_path, fps=24)
@@ -44,7 +44,7 @@ def convert_mp4_to_jpg(file_path, save_path):
         success, img = cap.read()
             
         if not success:
-            print('nottttttttttttttttttt success')
+            print('not success')
             break
 
         img = cv2.resize(img, (640, 360))

@@ -64,7 +64,7 @@ class ProtestDatasetEval(Dataset):
         self.img_list = sorted(os.listdir(img_dir))
         self.rate = rate
     def __len__(self):
-        return len(self.img_list) // self.rate + 1
+        return (len(self.img_list)-1) // self.rate + 1
     def __getitem__(self, idx):
         imgpath = os.path.join(self.img_dir,
                                 self.img_list[idx*self.rate])
