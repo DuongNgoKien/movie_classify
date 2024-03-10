@@ -21,42 +21,40 @@ from protestDetection.util import ProtestDatasetEval, modified_resnet50
 
 
 def eval_one_dir(img_dir, model, rate):
-        """
-        return model output of all the images in a directory
-        """
-        model.eval()
-        # make dataloader
-        dataset = ProtestDatasetEval(img_dir = img_dir, rate=rate)
-        data_loader = DataLoader(dataset,
-                                num_workers = 4,
-                                batch_size = 16)
-        # load model
+    """
+    return model output of all the images in a directory
+    """
+    model.eval()
+    # make dataloader
+    dataset = ProtestDatasetEval(img_dir = img_dir, rate=rate)
+    data_loader = DataLoader(dataset, num_workers = 16, batch_size = 16)
+    # load model
 
-        outputs = []
-        imgpaths = []
+    outputs = []
+    imgpaths = []
 
-        n_imgs = len(dataset)
-        with tqdm(total=n_imgs) as pbar:
-            for i, sample in enumerate(data_loader):
-                imgpath, input = sample['imgpath'], sample['image']
-                if torch.cuda.is_available():
-                    input = input.cuda()
+    n_imgs = len(dataset)
+    with tqdm(total=n_imgs) as pbar:
+        for i, sample in enumerate(data_loader):
+            imgpath, input = sample['imgpath'], sample['image']
+            if torch.cuda.is_available():
+                input = input.cuda()
 
-                input_var = Variable(input)
-                output = model(input_var)
-                outputs.append(output.cpu().data.numpy())
-                imgpaths += imgpath
-                if i < n_imgs / 16:
-                    pbar.update(16)
-                else:
-                    pbar.update(n_imgs%16)
+            input_var = Variable(input)
+            output = model(input_var)
+            outputs.append(output.cpu().data.numpy())
+            imgpaths += imgpath
+            if i < n_imgs / 16:
+                pbar.update(16)
+            else:
+                pbar.update(n_imgs%16)
 
-        predictions = np.concatenate(outputs)[:,0]
-        elapsed_time = []
-        for i in range(n_imgs):
-            elapsed_time.append(i*rate/24)
-        elapsed_time = np.array(elapsed_time) 
-        return predictions, elapsed_time
+    predictions = np.concatenate(outputs)[:,0]
+    elapsed_time = []
+    for i in range(n_imgs):
+        elapsed_time.append(i*rate/24)
+    elapsed_time = np.array(elapsed_time) 
+    return predictions, elapsed_time
 
 def infer(img_dir, model_path, rate=4):
 

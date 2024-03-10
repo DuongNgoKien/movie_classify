@@ -9,14 +9,17 @@ import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 def infer(checkpoint, rgb_list_file, audio_list_file):
-    print('perform testing...')
+    print('Perform testing...')
     args = option.parser.parse_args()
     args.device = 'cuda:' + str(args.cuda) if torch.cuda.is_available() else 'cpu'
     # device = torch.device("cuda")
 
-    test_loader = DataLoader(Dataset(args, rgb_list_file, audio_list_file, test_mode=True),
-                              batch_size=5, shuffle=False,
-                              num_workers=args.workers, pin_memory=True)
+    test_loader = DataLoader(
+        Dataset(args, rgb_list_file, audio_list_file, test_mode=True),batch_size=5,
+        shuffle=False,
+        num_workers=args.workers,
+        pin_memory=True
+    )
     
     model = Model(args)
     model = model.to(args.device)

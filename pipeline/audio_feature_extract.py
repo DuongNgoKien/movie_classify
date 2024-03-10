@@ -7,8 +7,11 @@ sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from torchvggish.torchvggish import vggish
 
 class AudioFeatureExtractor():
-    def __init__(self, audio_list_path = 'data/audios',
-                       feature_save_path = 'data/audio_features'):
+    def __init__(
+        self,
+        audio_list_path = 'data/audios',
+        feature_save_path = 'data/audio_features'
+    ):
         self.audio_list_path = audio_list_path
         self.feature_save_path = feature_save_path
 
@@ -29,12 +32,11 @@ class AudioFeatureExtractor():
             file_name_without_extension = os.path.splitext(audio_path)[0]
             print(audio_name)
             path_save = (os.path.join(self.feature_save_path, audio_name[:-4])+".npy")
+            
             if os.path.exists(path_save):
                 audio_list_file_feature.append(path_save)
                 continue
         
-            # if os.path.exists(os.path.join(self.feature_save_path, audio_name[:-4])+".npy"):
-            #     return os.path.join(self.feature_save_path, audio_name[:-4])+".npy"
             template_sub_file = file_name_without_extension + "_%01d.wav"
             cmd = 'ffmpeg -i "{}" -f segment -segment_time 1500 -c copy "{}"'.format(audio_path, template_sub_file)
             os.system(cmd)
@@ -52,9 +54,4 @@ class AudioFeatureExtractor():
         return audio_list_file_feature
 
 if __name__ == "__main__":
-    audio_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/dataset/horror_audio/horror/*.wav'
-    feature_save_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/dataset/horror_audio/features/horror'
-    audio_list_path = glob.glob(audio_path)
-    
-    a = AudioFeatureExtractor(audio_list_path, feature_save_path=feature_save_path)
-    a.extract_audio_features()
+    pass

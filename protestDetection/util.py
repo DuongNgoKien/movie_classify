@@ -27,8 +27,10 @@ class ProtestDataset(Dataset):
         self.label_frame = pd.read_csv(txt_file, delimiter="\t").replace('-', 0)
         self.img_dir = img_dir
         self.transform = transform
+        
     def __len__(self):
         return len(self.label_frame)
+    
     def __getitem__(self, idx):
         imgpath = os.path.join(self.img_dir,
                                 self.label_frame.iloc[idx, 0])
@@ -54,17 +56,21 @@ class ProtestDatasetEval(Dataset):
             img_dir: Directory with images
         """
         self.img_dir = img_dir
-        self.transform = transforms.Compose([
-                                transforms.Resize(256),
-                                transforms.CenterCrop(224),
-                                transforms.ToTensor(),
-                                transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                                     std=[0.229, 0.224, 0.225]),
-                                ])
+        self.transform = transforms.Compose(
+            [
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225]),
+            ]
+        )
         self.img_list = sorted(os.listdir(img_dir))
         self.rate = rate
+        
     def __len__(self):
-        return len(self.img_list) // self.rate + 1
+        return (len(self.img_list) - 1) // self.rate + 1
+    
     def __getitem__(self, idx):
         imgpath = os.path.join(self.img_dir,
                                 self.img_list[idx*self.rate])
@@ -73,6 +79,7 @@ class ProtestDatasetEval(Dataset):
         sample = {"imgpath":imgpath, "image":image}
         sample["image"] = self.transform(sample["image"])
         return sample
+
 
 class FinalLayer(nn.Module):
     """modified last layer for resnet50 for our dataset"""
@@ -97,15 +104,6 @@ def modified_resnet50():
     # load pretrained resnet50 with a modified last fully connected layer
     model = models.resnet50(pretrained = True)
     model.fc = FinalLayer()
-
-    # uncomment following lines if you wnat to freeze early layers
-    # i = 0
-    # for child in model.children():
-    #     i += 1
-    #     if i < 4:
-    #         for param in child.parameters():
-    #             param.requires_grad = False
-
 
     return model
 

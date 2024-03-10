@@ -17,7 +17,7 @@ from image_detect import (
     detect_violence,
 )
 from inference_detect import sentiment_analysis_inference
-from pipeline import smoke_drink_detect
+from pipeline import smoke_drink_detect, politic_detect
 from pytorchi3d.mp4_to_jpg import convert_mp4_to_jpg
 from torchvggish.torchvggish.mp4_to_wav import convert_mp4_to_avi
 from config import *
@@ -420,6 +420,23 @@ def classify_image(
             content='Chat kich thich',
             threshold=threshold
         )
+    
+    elif category_id == 10:
+        fps, list_img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
+        pred, elapsed_seconds = politic_detect.infer(
+            img_dir=list_img_dir,
+            model_path=POLITIC_CHECKPOINT
+        )
+        post_predictions(
+            pred=pred, 
+            command_id=command_id,
+            elapsed_seconds=elapsed_seconds,
+            api=category_api,
+            content_id=content_id,
+            category_id=category_id,
+            content='Chinh tri',
+            threshold=threshold
+        )
          
     update_status(
         type="command_status", command_id=command_id, status="Done"
@@ -532,7 +549,5 @@ def analysis_process(content):
        
 if __name__ == "__main__":
     with open("content_info.json", "r", encoding="utf-8") as f:
-        contents = json.load(f)
-        
-    for content in contents:
-        analysis_process(content)
+        content = json.load(f)
+    analysis_process(content)
