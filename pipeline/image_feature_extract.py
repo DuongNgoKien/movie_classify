@@ -35,22 +35,43 @@ class ImageFeatureExtractor:
 
     def extract_image_features(self):
         print("Image feature extraction...")
-        first_transforms = transforms.Compose([videotransforms.FirstCrop(224)])
-        second_transforms = transforms.Compose([videotransforms.SecondCrop(224)])
-        third_transforms = transforms.Compose([videotransforms.ThirdCrop(224)])
-        fourth_transforms = transforms.Compose([videotransforms.FourthCrop(224)])
-        center_transforms = transforms.Compose([videotransforms.CenterCrop(224)])
+        first_transforms = transforms.Compose(
+            [videotransforms.FirstCrop(224)]
+        )
+        second_transforms = transforms.Compose(
+            [videotransforms.SecondCrop(224)]
+        )
+        third_transforms = transforms.Compose(
+            [videotransforms.ThirdCrop(224)]
+        )
+        fourth_transforms = transforms.Compose(
+            [videotransforms.FourthCrop(224)]
+        )
+        center_transforms = transforms.Compose(
+            [videotransforms.CenterCrop(224)]
+        )
 
-        dataset = Dataset(self.list_img_dir, self.mode, False, num_ignore_frame=self.num_ignore_frame, save_dir=self.save_dir)
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=1, pin_memory=True)
+        dataset = Dataset(
+            self.list_img_dir,
+            self.mode, False, 
+            num_ignore_frame=self.num_ignore_frame,
+            save_dir=self.save_dir
+        )
+        dataloader = torch.utils.data.DataLoader(
+            dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=1,
+            pin_memory=True
+        )
 
         transformers = {
-               '0': center_transforms,
-               '1': first_transforms,
-               '2': second_transforms,
-               '4': third_transforms,
-               '3': fourth_transforms,
-                }
+            '0': center_transforms,
+            '1': first_transforms,
+            '2': second_transforms,
+            '4': third_transforms,
+            '3': fourth_transforms,
+        }
 
         i3d = InceptionI3d(400, in_channels=3)
         i3d.replace_logits(400)
@@ -90,7 +111,9 @@ class ImageFeatureExtractor:
                         if ip.shape[2] != 16:
                             continue
                         if phase == '0':
-                            elapsed_frames.append([f_start+start, f_start+end-1]) 
+                            elapsed_frames.append(
+                                [f_start+start, f_start+end-1]
+                            ) 
                         features[phase].append(i3d.extract_features(ip).squeeze(0).permute(1,2,3,0).data.cpu().numpy())
                 f_start = f_start + 3040
 
@@ -114,9 +137,4 @@ class ImageFeatureExtractor:
         return saved_list, elapsed_frames
 
 if __name__ == "__main__":
-    root = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/dataset/horror_film/images/Bloody'
-    save_dir = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/dataset/horror_film/features/Bloody'
-    list_img_dir = glob.glob(root+'/*')
-    #list_img_dir = list_img_dir[300:]
-    img_feature_extractor = ImageFeatureExtractor(list_img_dir=list_img_dir, save_dir=save_dir, num_ignore_frame=0) 
-    rgb_feature_files, elapsed_frames = img_feature_extractor.extract_image_features()
+    pass

@@ -12,11 +12,20 @@ def main():
     # get all content wait list
     content_list = requests.get(f"{ROOT_API}/content_command/get_wait")
     content_list = content_list.json()
-    content_list_json = json.dumps(content_list, indent=4, ensure_ascii=False)
-    with open("content_info.json", "w") as f:
-        f.write(content_list_json)
-        
-    subprocess.call("python3 analysis_process.py", shell=True)
+    content_list = sorted(
+        content_list,
+        key=lambda x: x["command"],
+        reverse=True
+    )
+    for content in content_list:
+        content_list_json = json.dumps(
+            content,
+            indent=4,
+            ensure_ascii=False
+        )
+        with open("content_info.json", "w") as f:
+            f.write(content_list_json)
+        subprocess.call("python3 analysis_process.py", shell=True)
     
     # remove all file images, audios, videos
     print("REMOVE FILES: audios/*, images/*, videos/*, subs/*")
@@ -29,8 +38,8 @@ def main():
     
     # Wait for new content
     print("Sleeping for one minutes...")
-    time.sleep(60)
+    time.sleep(30)
         
 if __name__ == "__main__":
-    # while True:
-    main()
+    while True:
+        main()

@@ -60,7 +60,8 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
             part = subs.slice(starts_after={'seconds': start_time_seconds}, ends_before={'seconds': end_time_seconds})
             # print(part.text)
             start_time_seconds = end_time_seconds
-            slices_srt.append(part)
+            if (re.sub("♪♪", "",part.text).replace("\n","") != ''):
+                slices_srt.append(part)
 
         slices_srt = [s for s in slices_srt if s]
         # initial tokenizer and model
@@ -77,7 +78,7 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
         results = []
         for sub in tqdm(slices_srt, desc="Predicting", colour="cyan"):
             inputs = tokenizer(
-                re.sub("♪♪","",sub.text),
+                sub.text,
                 padding=True,
                 truncation=True,
                 max_length=512,

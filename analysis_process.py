@@ -551,6 +551,5 @@ def analysis_process(content):
 if __name__ == "__main__":
     with open("content_info.json", "r", encoding="utf-8") as f:
         content = json.load(f)
-        
-    
-    analysis_process(content[0])
+    analysis_process(content)
+
