@@ -1,30 +1,13 @@
 import os
 import numpy as np
-import opennsfw2 as n2
-
-import numpy as np
-import torch
 
 from utils import *
-from decord import VideoReader, cpu
-from transformers import (
-    VideoMAEFeatureExtractor,
-    VideoMAEForVideoClassification
-)
 from pipeline import smoke_drink_detect
-from pipeline.audio_feature_extract import AudioFeatureExtractor
-from pipeline.image_feature_extract import ImageFeatureExtractor
 from pipeline.detect_scene import infer
 from pytorchi3d.mp4_to_jpg import convert_mp4_to_jpg
 from torchvggish.torchvggish.mp4_to_wav import convert_mp4_to_avi
-
-
-AUDIO_PATH = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/audios"
-IMAGE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/images"
-IMG_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/features/img_features"
-AUDIO_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/movie_classify/features/audio_features"
-VIOLENCE_CHECKPOINT= "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/violence.pkl"
-HORROR_CHECKPOINT = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/horror.pkl"
+from image_detect import detect_violence, detect_pornography
+from config import *
 
 
 def post_predictions(pred, elapsed_seconds, threshold=0.7):
@@ -57,16 +40,32 @@ def post_predictions(pred, elapsed_seconds, threshold=0.7):
             print(str(start) + " -> " + str(end))
 
 
-def smoke_drink_test():        
-    pred, elapsed_time = smoke_drink_detect.infer(video_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/Definitely, Maybe (3⧸9) Movie CLIP - Smoke-Off (2008) HD [804UN9XPV44].mp4')
-    post_predictions(pred, elapsed_time, threshold=0.4)
-
-
 def violence_detect_test():
-    pass
+    print("[TEST_CASE]: Violence")
+    video_path = "videos/thor_cut.mp4"
+    fps, img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
+    list_img_dir = [img_dir]
+    audio_path = convert_mp4_to_avi(video_path, AUDIO_PATH)
+    list_audio_path = [audio_path]
+    pred, elapsed_seconds = detect_violence(list_img_dir, list_audio_path, fps)
+    post_predictions(pred, elapsed_seconds)
 
+
+def pornography_detect_test():
+    print("[TEST_CASE]: Pornography")
+    video_path = "videos/pornography.mp4"
+    pred, elapsed_seconds = detect_pornography(video_path)
+    post_predictions(pred, elapsed_seconds)
+    
+def smoke_drink_detect_test():
+    print("[TEST_CASE]: smoke drink")
+    video_path = "videos/36.mp4"
+    pred, elapsed_seconds = smoke_drink_detect.infer(video_path)
+    post_predictions(pred, elapsed_seconds, threshold=0.2)
+    
 
 def summary_test():
+    print("[TEST_CASE]: Text summary")
     ROOT_API = "http://183.81.35.24:32774"
     CONTENT_SCRIPT_UPDATE_STATUS_API = f"{ROOT_API}/Content_Script/Update_Status"
     CONTENT_SCRIPT_UPDATE_API = f"{ROOT_API}/Content_Script/Update"
@@ -78,35 +77,25 @@ def summary_test():
 
 
 def extract_audio_test():
-    video_path = "videos/vietnamese.mp4"
+    print("[TEST_CASE]: Extract audio")
+    video_path = "videos/thor_cut.mp4"
     output_path =  audio_extract(video_file=video_path)
     print(output_path)
 
 
 def extract_frame_test():
-    video_path = "videos/chinese.mp4"
+    print("[TEST_CASE]: Extract images")
+    video_path = "videos/thor_cut.mp4"
     path_save = frames_extract(video_file=video_path)
     print(len(os.listdir(path_save)))
 
 
 def whisper_infer_test():
-    audio_file = "audio/english.mp3"
+    print("[TEST_CASE]: Whisper inference")
+    audio_file = "audios/thor_cut.mp3"
     result = whisper_infer(audio_path=audio_file, language="en")
     print(result)
     
     
 if __name__ == "__main__":
-    import requests
-    data = {
-        'command_id': 571, 
-        'content_id': 23, 
-        'category_id': 11, 
-        'timespan': '0:01:31,00 --> 0:02:59,00', 
-        'content': "Ahihihi", 
-        'detect_from': 'text', 
-        'threshold': 80
-    }
-    print(requests.post(
-        url="http://183.81.35.24:32774/content_category/create",
-        json=data
-    ))
+    smoke_drink_detect_test()

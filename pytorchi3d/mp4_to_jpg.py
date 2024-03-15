@@ -10,6 +10,9 @@ def change_fps(file_path, fps):
     output_name = ntpath.basename(file_path)
     output_path = file_path.replace(output_name, 'standard_'+output_name)
 
+    if os.path.exists(output_path):
+        return output_path
+
     cmd = 'ffmpeg -i "{}" -filter:v fps={} "{}" -y'.format(file_path, fps, output_path)
 
     os.system(cmd)

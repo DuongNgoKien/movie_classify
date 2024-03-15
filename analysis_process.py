@@ -52,6 +52,7 @@ def classify_text(
         sub_file_path (str or PathLike): Path to save sub file.
         threshold (float): Threshold of sentiment analysis. Defaults to 0.5.
     """
+    print("[ANALYSIS_TYPE]: Classify text")
     # update status
     update_status(
         type="command_status", command_id=command_id, status="Processing"
@@ -64,7 +65,6 @@ def classify_text(
             f"{ROOT_API}/content_script/get_by_content_id/{content_id}"
         ).json()
         speech2text_result = content_info["script"]
-        print(speech2text_result)
 
         if language != "en":
             translated_text = translation(
@@ -141,6 +141,7 @@ def speech(
         language (str): Language of content. [en | vi | zh]. Defaults to "en".
         sub_file_path (str or PathLike): Path to save sub file.
     """
+    print("[ANALYSIS_TYPE]: Speech to text")
     try:
         content_script = requests.get(
             f"{ROOT_API}/Content_Script/Get_By_Content_Id/{content_id}"
@@ -224,6 +225,7 @@ def speech_and_classify_text(
         sub_file_path (str or PathLike): Path to save sub file.
         threshold (float): Threshold of sentiment analysis. Defaults to 0.5.
     """
+    print("[ANALYSIS_TYPE]: Speech to text and classify text.")
     update_status(
         type="command_status", command_id=command_id, status="Processing"
     )
@@ -351,6 +353,7 @@ def classify_image(
         )
         threshold (float): Threshold of sentiment analysis. Defaults to 0.5.
     """
+    print("[ANALYSIS_TYPE]: Classify image")
     update_status(
         type="command_status", command_id=command_id, status="Processing"
     )
@@ -476,10 +479,10 @@ def analysis_process(content):
     if not os.path.exists(video_path):
         try:
             video_url = content_info["url"]
-            title = content_info["title"].replace(" ", "_")
-            sub_file_path = os.path.join(SUB_PATH, f"{title}.srt")
+            video_name = str(content_id)
+            sub_file_path = os.path.join(SUB_PATH, f"{video_name}.srt")
             print(f"Url: {video_url}")
-            video_path = f"{VIDEO_PATH}/{title}.mp4"
+            video_path = f"{VIDEO_PATH}/{video_name}.mp4"
             if not os.path.exists(video_path):
                 os.system(
                     f"wget -O {video_path} {video_url}"

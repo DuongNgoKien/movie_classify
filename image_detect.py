@@ -9,19 +9,7 @@ import numpy as np
 from pipeline.audio_feature_extract import AudioFeatureExtractor
 from pipeline.image_feature_extract import ImageFeatureExtractor
 from pipeline import detect_scene
-
-
-VIDEO_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/videos"
-AUDIO_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/audios"
-IMAGE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/images"
-IMG_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/features/img_features"
-AUDIO_FEATURE_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/features/audio_features"
-SUB_PATH = "/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/subs"
-VIOLECE_CHECKPOINT= "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/violence.pkl"
-HORROR_CHECKPOINT = "/home/www/data/data/saigonmusic/Dev_AI/kiendn/checkpoint/ckpt/horror.pkl"
-ROOT_API = "http://183.81.35.24:32774"
-COMMAND_UPDATE_STATUS_API = f"{ROOT_API}/content_command/update_status"
-CONTENT_UPDATE_STATUS_API = f"{ROOT_API}/content/update_status"
+from config import *
 
 
 def detect_violence(list_img_dir, audio_list_path, fps):
