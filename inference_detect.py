@@ -11,6 +11,19 @@ from transformers import (
     AutoModelForSequenceClassification
 )
 from tqdm import tqdm
+
+
+CATEGORY_MAP = {
+    "1": "Action",
+    "4": "Sexism",
+    "5": "Horror",
+    "6": "Racist",
+    "10": "Political",
+    "11": "Religious",
+    "12": "Toxic"
+}
+
+
 def extract_subtitle_info(text: str) -> list:
     """
     Extract the time and text from the subtitle text.
@@ -42,8 +55,10 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
     
     # get sub
     if category_id == 3 or category_id == 5:
+        print(f"[TEXT_PROCESSING]: Skip with category_id: {category_id}")
         return []
     else:
+        print(f"[TEXT_PROCESSING]: Start process category: {CATEGORY_MAP[str(category_id)]}")
         subs = pysrt.open(sub_file_path)
         # subtitle_info = extract_subtitle_info(sub_script)
         start_time_seconds = subs[0].start.hours * 3600 + subs[0].start.minutes * 60 + subs[0].start.seconds
@@ -60,7 +75,7 @@ def sentiment_analysis_inference(category_id, sub_file_path, threshold):
             part = subs.slice(starts_after={'seconds': start_time_seconds}, ends_before={'seconds': end_time_seconds})
             # print(part.text)
             start_time_seconds = end_time_seconds
-            if (re.sub("♪♪", "",part.text).replace("\n","") != ''):
+            if (re.sub("♪♪|♪", "",part.text).replace("\n","") != ''):
                 slices_srt.append(part)
 
         slices_srt = [s for s in slices_srt if s]

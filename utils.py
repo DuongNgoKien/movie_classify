@@ -37,6 +37,7 @@ def audio_extract(video_file):
     Args:
         video_file(str): path of video to extract audio
     """
+    print("[SPEECH_PROCESSING]: Extract audio file.")
     assert os.path.exists(video_file), f"Video path {video_file} not exists."
     filename, ext = os.path.splitext(video_file)
     filename = filename.split("/")[-1]
@@ -62,6 +63,7 @@ def frames_extract(video_file, output_ext="jpg", save_every_frames=5):
         save_every_frames(int): save image every save_every_frames.
         Defaults to 5
     """
+    print("[IMAGE_PROCESSING]: Extract video frame.")
     assert os.path.exists(video_file), f"Video path {video_file} not exists"
     filename, ext = os.path.splitext(video_file)
     filename = filename.split("/")[-1]
@@ -97,12 +99,13 @@ def whisper_infer(audio_path, language="vi", sub_file_path=""):
         language (str): Language of audio [en | zh | vi]. Defaults to "en".
         sub_file_path (str or PathLike): Path to save sub file. Defaults to "".
     """
+    print(f"[SPEECH_PROCESSING]: Start speech to text in audio path: {audio_path}")
     # Load model and compute output
     model = whisper.load_model("/home/www/data/data/saigonmusic/Dev_AI/manhvd/movie_classify/weights/whisper/large-v2.pt")
     
     transcribe = model.transcribe(
         audio_path,
-        verbose=False,
+        verbose=True,
         language=language,
         fp16=True
     )

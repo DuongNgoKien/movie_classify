@@ -1,13 +1,13 @@
 {
-    "id": 1493,
+    "id": 1841,
     "command": "classify_image",
     "status": "wait",
-    "content_id": 37,
-    "category_id": 3,
+    "content_id": 38,
+    "category_id": 1,
     "user_id": 1,
-    "threshold": 50,
+    "threshold": 75.39,
     "note": null,
     "progress": 0,
-    "created_at": "2024-03-08T17:08:44",
-    "modified_at": "2024-03-08T17:08:44"
+    "created_at": "2024-03-14T15:52:09",
+    "modified_at": "2024-03-14T15:52:09"
 }
