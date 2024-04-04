@@ -93,6 +93,9 @@ class ImageFeatureExtractor:
                 saved_list.append(os.path.join(self.save_dir, name+'__2.npy'))
                 saved_list.append(os.path.join(self.save_dir, name+'__3.npy'))
                 saved_list.append(os.path.join(self.save_dir, name+'__4.npy'))
+                
+                len_features = np.load(os.path.join(self.save_dir, name+'__0.npy')).shape[0]
+                elapsed_frames = [[i*16+1, i*16+16] for i in range(len_features)]
                 continue
             f_start, f_end = 1, 0
             features = {'0':[],'1':[], '2':[], '3':[], '4':[]}

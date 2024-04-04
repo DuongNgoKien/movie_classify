@@ -165,10 +165,8 @@ class Charades(data_utl.Dataset):
             tuple: (image, target) where target is class_index of the target class.
         """
         vid, label, file_path, nf = self.data[index]
-        # if os.path.exists(os.path.join(self.save_dir, vid + "__0.npy")):
-        #     return 0, 0, vid, 0
-        # else:
-        #     print(file_path)
+        if os.path.exists(os.path.join(self.save_dir, vid + "__0.npy")):
+            return 0, 0, vid, 0
 
         # if self.mode == "rgb":
         #     imgs = load_rgb_frames(os.path.join(self.root, vid), vid, 1, nf)
