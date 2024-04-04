@@ -58,7 +58,7 @@ def post_predictions(pred, elapsed_seconds, threshold=0.7):
 
 
 def smoke_drink_test():        
-    pred, elapsed_time = smoke_drink_detect.infer(video_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/Definitely, Maybe (3⧸9) Movie CLIP - Smoke-Off (2008) HD [804UN9XPV44].mp4')
+    pred, elapsed_time = smoke_drink_detect.infer(video_path = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/Smoking for the aesthetics.mp4')
     post_predictions(pred, elapsed_time, threshold=0.4)
 
 
