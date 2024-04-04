@@ -2,7 +2,7 @@ import nltk
 import time
 import pysrt
 import requests
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForCausalLM
 import re
 from tqdm import tqdm
 
@@ -55,45 +55,56 @@ def summary_infer(script):
 #    subs = pysrt.open(file_path)
     first_text = script
     texts = re.sub(r'\d+:\d+:\d+,\d+ --> \d+:\d+:\d+,\d+\n', '', first_text)
+    length_sub = len(texts)
 #   texts = script.strip("\n")
-    path_sum = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-led-base-book"
+    # path_sum = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/summary-led-base-book"
+    # tokenizer = AutoTokenizer.from_pretrained(path_sum)
+    path_sum = "/home/www/data/data/saigonmusic/Dev_AI/thainh/MODEL/gemma-2b-it"
     tokenizer = AutoTokenizer.from_pretrained(path_sum)
-    sentences = nltk.tokenize.sent_tokenize(texts)
+    model = AutoModelForCausalLM.from_pretrained(path_sum).to("cuda")
+    # sentences = nltk.tokenize.sent_tokenize(texts)
+    # # seperate the file if the file is too long compare to the model
+    # length = 0
+    # chunk = ""
+    # chunks = []
+    # count = - 1
+    # summary = ""
+    # for sentence in sentences:
+    #     count += 1
+    #     combined_length = len(tokenizer.tokenize(sentence)) + length
 
-    # seperate the file if the file is too long compare to the model
-    length = 0
-    chunk = ""
-    chunks = []
-    count = - 1
+    #     if combined_length <= tokenizer.max_len_single_sentence:
+    #         chunk += sentence + ""
+    #         length = combined_length
+    #         if count == len(sentences) - 1:
+    #             chunks.append(chunk.strip())
+    #     else:
+    #         chunks.append(chunk.strip())
 
-    for sentence in sentences:
-        count += 1
-        combined_length = len(tokenizer.tokenize(sentence)) + length
-
-        if combined_length <= tokenizer.max_len_single_sentence:
-            chunk += sentence + ""
-            length = combined_length
-            if count == len(sentences) - 1:
-                chunks.append(chunk.strip())
-        else:
-            chunks.append(chunk.strip())
-
-            length = 0
-            chunk = ""
-            chunk += sentence + " "
-            length = len(tokenizer.tokenize(sentence))
-
-    inputs = [
-        tokenizer(chunk, return_tensors="pt").to("cuda") for chunk in chunks
-    ]
-
-    model = AutoModelForSeq2SeqLM.from_pretrained(path_sum).to("cuda")
-
-    for word in tqdm(inputs, desc="Summary", colour="cyan"):
-        # generate text summary
-        outputs = model.generate(**word, max_length=1024)
-        text_summary = tokenizer.decode(*outputs, skip_special_tokens=True)
-        outputs_list.append(text_summary)
+    #         length = 0
+    #         chunk = ""
+    #         chunk += sentence + " "
+    #         length = len(tokenizer.tokenize(sentence))
+    
+    # inputs = []
+    summary_start = ""
+    for i in range(length_sub//10000+1):
+        sub_text = texts[i*10000:(i+1)*10000]
+        input_text = "You are an expert screenwriter with expertise in summarizing screenplays. Compose a coherent summary of a movie based on the given context, which includes summarizing the previous part of the movie and a subtitle for the next part.\
+        Context: {}\
+        Subtitle: {}\
+        Synopsis: ".format(summary_start, sub_text)
+        input_ids = tokenizer(input_text, return_tensors="pt").to("cuda")
+        outputs = model.generate(**input_ids, max_new_tokens=2000)
+        summary = tokenizer.decode(outputs[0]).split('Synopsis:')[1].replace('<eos>','').replace('\n','')
+        outputs_list.append(summary)
+    # model = AutoModelForSeq2SeqLM.from_pretrained(path_sum).to("cuda")
+    # for word in tqdm(inputs, desc="Summary", colour="cyan"):
+    #     # generate text summary
+    #     outputs = model.generate(**word, max_length=2000)
+    #     # text_summary = tokenizer.decode(*outputs, skip_special_tokens=True)
+    #     text_summary = tokenizer.decode(*outputs)  #.split('Synopsis:')[1].replace('<eos>','').replace('\n','')
+    #     outputs_list.append(text_summary)
 
     del tokenizer, model
     
