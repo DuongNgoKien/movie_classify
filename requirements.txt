@@ -2,7 +2,6 @@ menovideo
 opennsfw2
 opencv-python
 opencv-contrib-python
-torch
 transformers
 requests
 flask

@@ -425,7 +425,7 @@ def classify_image(
         )
     
     elif category_id == 10:
-        POLITIC_CHECKPOINT = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/protest-detection-violence-estimation/model_best.pth.tar'
+        # POLITIC_CHECKPOINT = '/home/www/data/data/saigonmusic/Dev_AI/kiendn/protest-detection-violence-estimation/model_best.pth.tar'
         fps, list_img_dir = convert_mp4_to_jpg(video_path, IMAGE_PATH)
         pred, elapsed_seconds = politic_detect.infer(
             img_dir=list_img_dir,
