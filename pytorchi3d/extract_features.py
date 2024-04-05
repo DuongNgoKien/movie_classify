@@ -66,10 +66,11 @@ def run(max_steps=64e3, mode='rgb', root='/ssd2/charades/Charades_v1_rgb', split
         for data in dataloaders[phase]:
             # get the inputs
             inputs, labels, name = data
-            if os.path.exists(os.path.join(save_dir, name[0]+'.npy')):
+            if os.path.exists(os.path.join(save_dir, name[0] + '.npy')):
                 continue
 
             b,c,t,h,w = inputs.shape
+            
             if t > 1600:
                 features = []
                 for start in range(1, t-56, 1600):
